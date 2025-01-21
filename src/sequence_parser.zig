@@ -31,7 +31,8 @@ pub fn deinit(self: *Self) void {
     self.sequence_split = undefined;
 }
 
-pub fn get_seq_info(self: *Self, dir: *fs.Dir) !bool { // todo what return value?
+// TODO: rewrite to work with useless files...
+pub fn get_seq_info(self: *Self, dir: *fs.Dir) !bool {
     var first_filename: []const u8 = undefined;
     var secd_filename: []const u8 = undefined;
     var has_list_one_file_in_dir: bool = false;

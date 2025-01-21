@@ -29,7 +29,7 @@ pub fn check_is_sequence_using_two_filenames(
 ) !struct { u1, usize, usize, u16, u16 } {
     // u1 : bool (0: is sequence, 1 not sequence)
     // usize: idx of filename_1 and _2 where number start.
-    // usize: idx of filename_1 where number ends. // TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // usize: idx of filename_1 where number ends.
     // u16: sequence number on filename_1
     // u16: sequence number on filename_2
 

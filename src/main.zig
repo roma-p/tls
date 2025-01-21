@@ -14,7 +14,7 @@ const constants = @import("constants.zig");
 const def_entry = DirEntry{ .name = "", .kind = .file };
 
 pub fn main() !void {
-    const dir = try fs.cwd().openDir(".", .{ .access_sub_paths = false });
+    const dir = try fs.cwd().openDir(".", .{ .access_sub_paths = false, .iterate = true });
     var walker = dir.iterate();
     var writer = std.io.getStdOut().writer();
 
@@ -51,7 +51,7 @@ pub fn main() !void {
         switch (entry.kind) {
             .file => {},
             .directory => {
-                var d = try dir.openDir(entry.name, .{ .no_follow = false });
+                var d = try dir.openDir(entry.name, .{ .no_follow = false, .iterate = true });
                 const is_seq = try seq_parser.get_seq_info(&d);
                 if (is_seq) {
                     term_str_out.append_string(" :: ");
@@ -67,10 +67,9 @@ pub fn main() !void {
             },
             else => {},
         }
-
         term_str_out.append_string("\n");
         _ = try writer.write(
-            term_str_out.array[0..term_str_out.str_len],
+            term_str_out.get_slice(),
         );
         term_str_out.reset();
     }
