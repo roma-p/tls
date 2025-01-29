@@ -83,11 +83,11 @@ fn collect(
     buffer_isolated_files_i: usize,
 ) !void {
     if (first_file == last_file) {
-        try str_out.append_number(u16, first_file);
+        try str_out.append_number(u16, first_file, null);
     } else {
-        try str_out.append_number(u16, first_file);
+        try str_out.append_number(u16, first_file, null);
         str_out.append_char(':');
-        try str_out.append_number(u16, last_file);
+        try str_out.append_number(u16, last_file, null);
     }
     if (buffer_isolated_files_i > buffer_isolated_files.len) {
         str_out.append_string("??");
@@ -95,7 +95,7 @@ fn collect(
         str_out.append_char('?');
         var k: usize = 0;
         while (k < buffer_isolated_files_i) : (k += 1) {
-            try str_out.append_number(u16, buffer_isolated_files[k]);
+            try str_out.append_number(u16, buffer_isolated_files[k], null);
             str_out.append_char(',');
         }
         str_out.trim_str(1);

@@ -51,15 +51,35 @@ pub fn StringOnStack(comptime max_len: usize) type {
             self.str_len += i;
         }
 
-        pub fn append_number(self: *Self, comptime T: type, number: T) !void {
-            const num_as_string_tmp = try std.fmt.bufPrint(
-                &self._append_number_buffer,
-                "{}",
-                .{number},
-            );
-            self.append_string(num_as_string_tmp);
+        pub fn append_number(self: *Self, comptime T: type, number: T, left_margin: ?usize) !void {
+            var num_as_string_tmp: []const u8 = undefined;
+            if (@mod(number, 1) == 0) {
+                num_as_string_tmp = try std.fmt.bufPrint(
+                    &self._append_number_buffer,
+                    "{d:.0}",
+                    .{number},
+                );
+            } else {
+                num_as_string_tmp = try std.fmt.bufPrint(
+                    &self._append_number_buffer,
+                    "{d:.1}",
+                    .{number},
+                );
+            }
+
+            if (left_margin != null and num_as_string_tmp.len < left_margin.?) {
+                var i: usize = 0;
+                const max: usize = left_margin.? - num_as_string_tmp.len;
+                while (i < max) : (i += 1) {
+                    self.append_char(' ');
+                }
+                self.append_string(num_as_string_tmp);
+            } else {
+                self.append_string(num_as_string_tmp);
+            }
             self._append_number_buffer = undefined;
         }
+
         pub fn print_debug(self: *Self) void {
             std.debug.print("{s}\n", .{self.array[0..self.str_len]});
         }
@@ -88,9 +108,17 @@ test "append_str" {
 
 test "append_number" {
     var str1 = StringOnStack(10).init();
-    try str1.append_number(u16, 45);
+    try str1.append_number(u16, 45, null);
     try std.testing.expectEqualSlices(u8, "45", str1.get_slice());
-    try str1.append_number(u8, 12);
+    try str1.append_number(u8, 12, null);
     try std.testing.expectEqualSlices(u8, "4512", str1.get_slice());
     str1.deinit();
+    var str2 = StringOnStack(10).init();
+    try str2.append_number(u16, 45, 4);
+    try std.testing.expectEqualSlices(u8, "  45", str2.get_slice());
+    str2.deinit();
+    var str3 = StringOnStack(10).init();
+    try str3.append_number(u16, 45, 1);
+    try std.testing.expectEqualSlices(u8, "45", str3.get_slice());
+    str3.deinit();
 }

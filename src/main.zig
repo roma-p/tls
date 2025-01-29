@@ -5,6 +5,7 @@ const DirEntry = fs.Dir.Entry;
 const sequence_split = @import("sequence_split.zig");
 const sequence_parser = @import("sequence_parser.zig");
 const sequence_formatter = @import("sequence_formatter.zig");
+const size_formatter = @import("size_formatter.zig");
 const SequenceSplit = sequence_split.SequenceSplit;
 const filename_comp = @import("filename_comp.zig");
 const string_on_stack = @import("string_on_stack.zig");
@@ -44,7 +45,18 @@ pub fn main() !void {
         dir_entry_sorted[i] = entry;
         i += 1;
         const stat = try dir.statFile(entry.name);
-        try term_str_out.append_number(u64, stat.size); // TODO format size!
+        const size_format = size_formatter.format_size(stat.size);
+
+        // max size of size if 6 char: 999.9T
+        const size_info = size_format.@"2";
+        if (size_info == 0) {
+            try term_str_out.append_number(f32, size_format.@"0", 6);
+        } else if (size_info == 1) {
+            try term_str_out.append_number(f32, size_format.@"0", 5);
+            term_str_out.append_char(size_format.@"1");
+        } else {
+            term_str_out.append_string("  huge");
+        }
         term_str_out.append_string("\t");
         term_str_out.append_string(entry.name);
 
