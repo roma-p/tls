@@ -11,6 +11,8 @@ const filename_comp = @import("filename_comp.zig");
 const string_on_stack = @import("string_on_stack.zig");
 const StringOnStack = string_on_stack.StringOnStack;
 const constants = @import("constants.zig");
+const file_stat = @import("file_stat.zig");
+const permission = @import("permission.zig");
 
 const def_entry = DirEntry{ .name = "", .kind = .file };
 
@@ -19,7 +21,7 @@ pub fn main() !void {
     var walker = dir.iterate();
     var writer = std.io.getStdOut().writer();
 
-    var term_str_out = StringOnStack(constants.MAX_STR_ENTRY_LEN).init();
+    var term_str_out = StringOnStack(constants.MAX_STR_LEN_ENTRY).init();
     var seq_parser = sequence_parser.init();
     term_str_out.deinit();
 
@@ -44,8 +46,12 @@ pub fn main() !void {
 
         dir_entry_sorted[i] = entry;
         i += 1;
-        const stat = try dir.statFile(entry.name);
+
+        const stat_refined = try file_stat.posix_stat(dir, entry.name);
+        const stat = try dir.statFile(entry.name); // remove this call, use stat_refined instead.
         const size_format = size_formatter.format_size(stat.size);
+
+        term_str_out.append_string(permission.FilePermissions.format(stat_refined.mode)[0..10]);
 
         // max size of size if 6 char: 999.9T
         const size_info = size_format.@"2";
@@ -57,6 +63,8 @@ pub fn main() !void {
         } else {
             term_str_out.append_string("  huge");
         }
+        term_str_out.append_string("  ");
+        term_str_out.append_string(stat_refined.owner[0..stat_refined.owner_len]);
         term_str_out.append_string("\t");
         term_str_out.append_string(entry.name);
 

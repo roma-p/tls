@@ -7,16 +7,16 @@ const string_on_stack = @import("string_on_stack.zig");
 const constants = @import("constants.zig");
 
 sequence_split: sequence_split_mod.SequenceSplit,
-pattern_before: string_on_stack.StringOnStack(constants.MAX_STR_PATTERN_LEN),
-pattern_after: string_on_stack.StringOnStack(constants.MAX_STR_PATTERN_LEN),
+pattern_before: string_on_stack.StringOnStack(constants.MAX_STR_LEN_PATTERN),
+pattern_after: string_on_stack.StringOnStack(constants.MAX_STR_LEN_PATTERN),
 
 const Self = @This();
 
 pub fn init() Self {
     return Self{
         .sequence_split = sequence_split_mod.SequenceSplit.init(),
-        .pattern_before = string_on_stack.StringOnStack(constants.MAX_STR_PATTERN_LEN).init(),
-        .pattern_after = string_on_stack.StringOnStack(constants.MAX_STR_PATTERN_LEN).init(),
+        .pattern_before = string_on_stack.StringOnStack(constants.MAX_STR_LEN_PATTERN).init(),
+        .pattern_after = string_on_stack.StringOnStack(constants.MAX_STR_LEN_PATTERN).init(),
     };
 }
 

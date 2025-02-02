@@ -5,7 +5,7 @@ pub fn StringOnStack(comptime max_len: usize) type {
     return struct {
         array: [max_len]u8,
         str_len: usize,
-        _append_number_buffer: [8]u8,
+        _append_number_buffer: [16]u8,
 
         const Self = @This();
 
