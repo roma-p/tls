@@ -14,7 +14,7 @@ const StatRefined = struct {
     owner: [constants.MAX_STR_LEN_OWNER]u8,
     owner_len: usize,
     mode: u32,
-    // mtime: u32,
+    size: u64,
 };
 
 pub fn posix_stat(dir: Dir, path: []const u8) !StatRefined {
@@ -27,6 +27,7 @@ pub fn posix_stat(dir: Dir, path: []const u8) !StatRefined {
         .owner = [_]u8{0} ** constants.MAX_STR_LEN_OWNER,
         .owner_len = name_z_type.len,
         .mode = stat.mode,
+        .size = @bitCast(stat.size),
     };
 
     var i: usize = 0;

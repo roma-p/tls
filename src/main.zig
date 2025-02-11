@@ -48,8 +48,7 @@ pub fn main() !void {
         i += 1;
 
         const stat_refined = try file_stat.posix_stat(dir, entry.name);
-        const stat = try dir.statFile(entry.name); // remove this call, use stat_refined instead.
-        const size_format = size_formatter.format_size(stat.size);
+        const size_format = size_formatter.format_size(stat_refined.size);
 
         term_str_out.append_string(permission.FilePermissions.format(stat_refined.mode)[0..10]);
         if (try file_stat.hasAnyExtendedAttributes(entry.name)) {
@@ -59,15 +58,25 @@ pub fn main() !void {
         }
 
         // max size of size if 6 char: 999.9T
-        const size_info = size_format.@"2";
-        if (size_info == 0) {
-            try term_str_out.append_number(f32, size_format.@"0", 6);
-        } else if (size_info == 1) {
-            try term_str_out.append_number(f32, size_format.@"0", 5);
-            term_str_out.append_char(size_format.@"1");
+        const is_size_to_print = switch (entry.kind) {
+            .file => true,
+            else => false,
+        };
+
+        if (is_size_to_print) {
+            const size_info = size_format.@"2";
+            if (size_info == 0) {
+                try term_str_out.append_number(f32, size_format.@"0", 6);
+            } else if (size_info == 1) {
+                try term_str_out.append_number(f32, size_format.@"0", 5);
+                term_str_out.append_char(size_format.@"1");
+            } else {
+                term_str_out.append_string("  huge");
+            }
         } else {
-            term_str_out.append_string("  huge");
+            term_str_out.append_string("     -");
         }
+
         term_str_out.append_string("  ");
         term_str_out.append_string(stat_refined.owner[0..stat_refined.owner_len]);
         term_str_out.append_string("\t");
