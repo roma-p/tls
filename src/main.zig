@@ -52,6 +52,11 @@ pub fn main() !void {
         const size_format = size_formatter.format_size(stat.size);
 
         term_str_out.append_string(permission.FilePermissions.format(stat_refined.mode)[0..10]);
+        if (try file_stat.hasAnyExtendedAttributes(entry.name)) {
+            term_str_out.append_char('@');
+        } else {
+            term_str_out.append_char(' ');
+        }
 
         // max size of size if 6 char: 999.9T
         const size_info = size_format.@"2";

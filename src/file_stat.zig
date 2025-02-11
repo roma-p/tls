@@ -6,6 +6,7 @@ const PosixStat = std.posix.Stat;
 const Dir = std.fs.Dir;
 
 const c = @cImport({
+    @cInclude("sys/xattr.h");
     @cInclude("pwd.h");
 });
 
@@ -35,6 +36,22 @@ pub fn posix_stat(dir: Dir, path: []const u8) !StatRefined {
         ret.owner[i] = name_z_type[i];
     }
     return ret;
+}
+
+pub fn hasAnyExtendedAttributes(path: []const u8) !bool {
+    const result = c.listxattr(
+        path.ptr,
+        null, // Don't retrieve actual attributes
+        0, // Get required buffer size
+        0, // options flags.
+    );
+
+    if (result > 0) {
+        return true;
+    } else if (result == 0) {
+        return false;
+    } else return false; // FIXE ME: masking errors...(if -1)
+
 }
 
 test "file info" {
