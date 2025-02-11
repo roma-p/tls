@@ -13,6 +13,7 @@ const StringOnStack = string_on_stack.StringOnStack;
 const constants = @import("constants.zig");
 const file_stat = @import("file_stat.zig");
 const permission = @import("permission.zig");
+const date_formatter = @import("date_formatter.zig");
 
 const def_entry = DirEntry{ .name = "", .kind = .file };
 
@@ -80,6 +81,21 @@ pub fn main() !void {
         term_str_out.append_string("  ");
         term_str_out.append_string(stat_refined.owner[0..stat_refined.owner_len]);
         term_str_out.append_string("\t");
+
+        const date_info = date_formatter.get_date_info(stat_refined.mtime);
+        try term_str_out.append_number(u8, date_info.@"1", 2);
+        term_str_out.append_char(' ');
+        term_str_out.append_string(date_formatter.conv_mont_id_to_trigram(date_info.@"2"));
+        term_str_out.append_char(' ');
+        if (date_info.@"0" == 0) {
+            try term_str_out.append_number(u8, date_info.@"4".?, 2);
+            term_str_out.append_char(':');
+            try term_str_out.append_number(u8, date_info.@"5".?, 2);
+        } else {
+            try term_str_out.append_number(u16, date_info.@"3".?, 4);
+        }
+        term_str_out.append_char(' ');
+
         term_str_out.append_string(entry.name);
 
         switch (entry.kind) {

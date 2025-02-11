@@ -15,6 +15,7 @@ const StatRefined = struct {
     owner_len: usize,
     mode: u32,
     size: u64,
+    mtime: u64,
 };
 
 pub fn posix_stat(dir: Dir, path: []const u8) !StatRefined {
@@ -23,11 +24,14 @@ pub fn posix_stat(dir: Dir, path: []const u8) !StatRefined {
     const name_c_type: [*c]u8 = psswd.*.pw_name;
     const name_z_type = std.mem.span(@as([*:0]const u8, name_c_type));
     // considering that the C string is null terminated.
+    const mtime = stat.mtime();
     var ret = StatRefined{
         .owner = [_]u8{0} ** constants.MAX_STR_LEN_OWNER,
         .owner_len = name_z_type.len,
         .mode = stat.mode,
         .size = @bitCast(stat.size),
+        // .mtime = @intCast(@as(i128, mtime.tv_sec) * std.time.ns_per_s + mtime.tv_nsec / 1_000_000_000),
+        .mtime = @intCast(@as(i128, mtime.tv_sec)),
     };
 
     var i: usize = 0;
@@ -63,5 +67,5 @@ test "file info" {
     defer file.close();
 
     const stat = try posix_stat(std.fs.cwd(), path);
-    std.debug.print("\n {s} \n", .{stat.owner[0..stat.owner_len]});
+    _ = stat;
 }
