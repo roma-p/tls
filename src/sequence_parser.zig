@@ -10,13 +10,18 @@ sequence_split: sequence_split_mod.SequenceSplit,
 pattern_before: string_on_stack.StringOnStack(constants.MAX_STR_LEN_PATTERN),
 pattern_after: string_on_stack.StringOnStack(constants.MAX_STR_LEN_PATTERN),
 
+filename_buffer_1: string_on_stack.StringOnStack(constants.MAX_STR_LEN_PATTERN),
+filename_buffer_2: string_on_stack.StringOnStack(constants.MAX_STR_LEN_PATTERN),
+
 const Self = @This();
 
 pub fn init() Self {
     return Self{
         .sequence_split = sequence_split_mod.SequenceSplit.init(),
-        .pattern_before = string_on_stack.StringOnStack(constants.MAX_STR_LEN_PATTERN).init(),
         .pattern_after = string_on_stack.StringOnStack(constants.MAX_STR_LEN_PATTERN).init(),
+        .pattern_before = string_on_stack.StringOnStack(constants.MAX_STR_LEN_PATTERN).init(),
+        .filename_buffer_1 = string_on_stack.StringOnStack(constants.MAX_STR_LEN_PATTERN).init(),
+        .filename_buffer_2 = string_on_stack.StringOnStack(constants.MAX_STR_LEN_PATTERN).init(),
     };
 }
 
@@ -24,19 +29,26 @@ pub fn reset(self: *Self) void {
     self.sequence_split.reset();
     self.pattern_before.reset();
     self.pattern_after.reset();
+    self.filename_buffer_1.reset();
+    self.filename_buffer_2.reset();
 }
 
 pub fn deinit(self: *Self) void {
     self.sequence_split.deinit();
     self.sequence_split = undefined;
+    self.pattern_before.deinit();
+    self.pattern_after.deinit();
+    self.filename_buffer_1.deinit();
+    self.filename_buffer_2.deinit();
 }
 
 // TODO: rewrite to work with useless files...
 pub fn get_seq_info(self: *Self, dir: *fs.Dir) !bool {
-    var first_filename: []const u8 = undefined;
-    var secd_filename: []const u8 = undefined;
     var has_list_one_file_in_dir: bool = false;
     var has_list_two_file_in_dir: bool = false;
+
+    self.filename_buffer_1.reset();
+    self.filename_buffer_2.reset();
 
     var w = dir.iterate();
 
@@ -44,7 +56,7 @@ pub fn get_seq_info(self: *Self, dir: *fs.Dir) !bool {
     while (try w.next()) |e| {
         switch (e.kind) {
             .file => {
-                first_filename = e.name;
+                self.filename_buffer_1.append_string(e.name);
                 has_list_one_file_in_dir = true;
                 break;
             },
@@ -58,7 +70,7 @@ pub fn get_seq_info(self: *Self, dir: *fs.Dir) !bool {
     while (try w.next()) |e| {
         switch (e.kind) {
             .file => {
-                secd_filename = e.name;
+                self.filename_buffer_2.append_string(e.name);
                 has_list_two_file_in_dir = true;
                 break;
             },
@@ -67,6 +79,9 @@ pub fn get_seq_info(self: *Self, dir: *fs.Dir) !bool {
     }
 
     if (!has_list_two_file_in_dir) return false;
+
+    const first_filename = self.filename_buffer_1.get_slice();
+    const secd_filename = self.filename_buffer_2.get_slice();
 
     const two_file_cmp_ret = try filename_comp.check_is_sequence_using_two_filenames(
         first_filename,
@@ -100,7 +115,6 @@ pub fn get_seq_info(self: *Self, dir: *fs.Dir) !bool {
 
     self.pattern_after.append_string(pattern_after);
     self.pattern_before.append_string(pattern_before);
-
     return true;
 }
 
