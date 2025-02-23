@@ -14,45 +14,33 @@ const constants = @import("constants.zig");
 const file_stat = @import("file_stat.zig");
 const permission = @import("permission.zig");
 const date_formatter = @import("date_formatter.zig");
+const _dir_content = @import("dir_content.zig");
+const DirContent = _dir_content.DirContent;
 
 const def_entry = DirEntry{ .name = "", .kind = .file };
 
 pub fn main() !void {
+    var dir_content = DirContent.init();
+
     const dir = try fs.cwd().openDir(".", .{ .access_sub_paths = false, .iterate = true });
-    var walker = dir.iterate();
     var writer = std.io.getStdOut().writer();
 
     var term_str_out = StringOnStack(constants.MAX_STR_LEN_ENTRY).init();
     var seq_parser = sequence_parser.init();
     term_str_out.deinit();
 
-    var dir_entry_sorted = [1]DirEntry{def_entry} ** constants.MAX_FILE_IN_DIR;
+    try dir_content.populate(&dir);
+    const dir_content_slice = dir_content.get_slice();
 
-    var i: usize = 0;
+    for (dir_content_slice) |entry| {
+        const name_slice = entry.name.get_slice();
+        if (std.mem.eql(u8, name_slice, "")) continue;
 
-    while (try walker.next()) |entry| {
-        dir_entry_sorted[i] = entry;
-        i += 1;
-        // TODO: handle overflow.
-    }
-
-    std.mem.sort(DirEntry, &dir_entry_sorted, {}, comptime struct {
-        fn lessThan(_: void, lhs: DirEntry, rhs: DirEntry) bool {
-            return std.mem.order(u8, lhs.name, rhs.name) == .lt;
-        }
-    }.lessThan);
-
-    for (dir_entry_sorted) |entry| {
-        if (std.mem.eql(u8, entry.name, "")) continue;
-
-        dir_entry_sorted[i] = entry;
-        i += 1;
-
-        const stat_refined = try file_stat.posix_stat(dir, entry.name);
+        const stat_refined = try file_stat.posix_stat(dir, name_slice);
         const size_format = size_formatter.format_size(stat_refined.size);
 
         term_str_out.append_string(permission.FilePermissions.format(stat_refined.mode)[0..10]);
-        if (try file_stat.hasAnyExtendedAttributes(entry.name)) {
+        if (try file_stat.hasAnyExtendedAttributes(name_slice)) {
             term_str_out.append_char('@');
         } else {
             term_str_out.append_char(' ');
@@ -96,12 +84,12 @@ pub fn main() !void {
         }
         term_str_out.append_char(' ');
 
-        term_str_out.append_string(entry.name);
+        term_str_out.append_string(name_slice);
 
         switch (entry.kind) {
             .file => {},
             .directory => {
-                var d = try dir.openDir(entry.name, .{ .no_follow = false, .iterate = true });
+                var d = try dir.openDir(name_slice, .{ .no_follow = false, .iterate = true });
                 const is_seq = try seq_parser.get_seq_info(&d);
                 if (is_seq) {
                     term_str_out.append_string(" :: ");

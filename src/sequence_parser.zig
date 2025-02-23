@@ -35,11 +35,14 @@ pub fn reset(self: *Self) void {
 
 pub fn deinit(self: *Self) void {
     self.sequence_split.deinit();
-    self.sequence_split = undefined;
     self.pattern_before.deinit();
     self.pattern_after.deinit();
     self.filename_buffer_1.deinit();
     self.filename_buffer_2.deinit();
+    self.sequence_split = undefined;
+    self.pattern_before = undefined;
+    self.filename_buffer_1 = undefined;
+    self.filename_buffer_2 = undefined;
 }
 
 // TODO: rewrite to work with useless files...

@@ -96,7 +96,7 @@ pub fn StringOnStack(comptime max_len: usize) type {
             self.str_len -= @min(trim_range, self.str_len);
         }
 
-        pub fn get_slice(self: *Self) []const u8 {
+        pub fn get_slice(self: *const Self) []const u8 {
             return self.array[0..self.str_len];
         }
     };
