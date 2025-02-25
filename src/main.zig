@@ -89,7 +89,7 @@ pub fn main() !void {
         switch (entry.kind) {
             .file => {},
             .directory => {
-                var d = try dir.openDir(name_slice, .{ .no_follow = false, .iterate = true });
+                const d = try dir.openDir(name_slice, .{ .no_follow = false, .iterate = true });
                 const is_seq = try seq_parser.get_seq_info(&d);
                 if (is_seq) {
                     term_str_out.append_string(" :: ");
