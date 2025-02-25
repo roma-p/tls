@@ -46,6 +46,7 @@ pub fn deinit(self: *Self) void {
     self.pattern_after.deinit();
     self.filename_buffer_1.deinit();
     self.filename_buffer_2.deinit();
+    self.dir_content = undefined;
     self.sequence_split = undefined;
     self.pattern_before = undefined;
     self.filename_buffer_1 = undefined;
@@ -61,15 +62,15 @@ pub fn get_seq_info(self: *Self, dir: *const fs.Dir) !bool {
     self.filename_buffer_1.reset();
     self.filename_buffer_2.reset();
 
-    var dir_content = DirContent.init();
-    try dir_content.populate(dir);
-    const dir_content_slice = dir_content.get_slice();
+    try self.dir_content.populate(dir);
+    const dir_content_slice = self.dir_content.get_slice();
 
     var i: usize = 0;
 
     // find the first filename used to compare to the others...
-    while (i < dir_content_slice.len) : (i += 1) {
+    while (i < dir_content_slice.len) {
         var e = dir_content_slice[i];
+        i += 1;
         switch (e.kind) {
             .file => {
                 self.filename_buffer_1.append_string(e.name.get_slice());
@@ -79,13 +80,13 @@ pub fn get_seq_info(self: *Self, dir: *const fs.Dir) !bool {
             else => return false,
         }
     }
-    i += 1;
 
     if (!has_list_one_file_in_dir) return false;
 
     // looking for second filename : used to look for sequence pattern.
-    while (i < dir_content_slice.len) : (i += 1) {
+    while (i < dir_content_slice.len) {
         var e = dir_content_slice[i];
+        i += 1;
         switch (e.kind) {
             .file => {
                 self.filename_buffer_2.append_string(e.name.get_slice());
@@ -95,8 +96,6 @@ pub fn get_seq_info(self: *Self, dir: *const fs.Dir) !bool {
             else => return false,
         }
     }
-
-    i += 1;
 
     if (!has_list_two_file_in_dir) return false;
 
@@ -115,10 +114,9 @@ pub fn get_seq_info(self: *Self, dir: *const fs.Dir) !bool {
     const pattern_before = first_filename[0..two_file_cmp_ret.@"1"];
     const pattern_after = first_filename[two_file_cmp_ret.@"2"..];
 
-    i += 1;
-
-    while (i < dir_content_slice.len) : (i += 1) {
+    while (i < dir_content_slice.len) {
         var e = dir_content_slice[i];
+        i += 1;
         switch (e.kind) {
             .file => {
                 const seq_nb = try filename_comp.check_file_belong_to_sequence(
