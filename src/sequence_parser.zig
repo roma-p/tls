@@ -8,60 +8,53 @@ const constants = @import("constants.zig");
 const _dir_content = @import("dir_content.zig");
 const DirContent = _dir_content.DirContent;
 
-dir_content: DirContent,
+_dir_content: DirContent,
+// _sequence_info_buff: [100]SequenceInfo,
 
 sequence_split: sequence_split_mod.SequenceSplit,
 pattern_before: string.StringLongUnicode,
 pattern_after: string.StringLongUnicode,
 
-filename_buffer_1: string.StringLongUnicode,
-filename_buffer_2: string.StringLongUnicode,
-
 // missing here: multiple sequences. flag to capture or not rights.
+
+const SequenceInfo = struct {
+    sequence_split: sequence_split_mod.SequenceSplit,
+    pattern_after: string.StringLongUnicode,
+    pattern_before: string.StringLongUnicode,
+};
 
 const Self = @This();
 
 pub fn init() Self {
     return Self{
-        .dir_content = DirContent.init(),
+        ._dir_content = DirContent.init(),
         .sequence_split = sequence_split_mod.SequenceSplit.init(),
         .pattern_after = string.StringLongUnicode.init(),
         .pattern_before = string.StringLongUnicode.init(),
-        .filename_buffer_1 = string.StringLongUnicode.init(),
-        .filename_buffer_2 = string.StringLongUnicode.init(),
     };
 }
 
 pub fn reset(self: *Self) void {
-    self.dir_content.reset();
+    self._dir_content.reset();
     self.sequence_split.reset();
     self.pattern_before.reset();
     self.pattern_after.reset();
-    self.filename_buffer_1.reset();
-    self.filename_buffer_2.reset();
 }
 
 pub fn deinit(self: *Self) void {
-    self.dir_content.deinit();
+    self._dir_content.deinit();
     self.sequence_split.deinit();
     self.pattern_before.deinit();
     self.pattern_after.deinit();
-    self.filename_buffer_1.deinit();
-    self.filename_buffer_2.deinit();
-    self.dir_content = undefined;
+    self._dir_content = undefined;
     self.sequence_split = undefined;
     self.pattern_before = undefined;
-    self.filename_buffer_1 = undefined;
-    self.filename_buffer_2 = undefined;
 }
 
 pub fn get_seq_info(self: *Self, dir: *const fs.Dir) !bool {
-    self.dir_content.reset();
-    self.filename_buffer_1.reset();
-    self.filename_buffer_2.reset();
-
-    try self.dir_content.populate(dir);
-    const dir_content_slice = self.dir_content.get_slice();
+    self._dir_content.reset();
+    try self._dir_content.populate(dir);
+    const dir_content_slice = self._dir_content.get_slice();
 
     if (dir_content_slice.len == 0) return false;
 

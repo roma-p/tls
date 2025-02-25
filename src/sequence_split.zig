@@ -45,7 +45,7 @@ pub const SequenceSplit = struct {
                     self.array[j + 1] += 1;
                     return;
                 } else {
-                    self.shift_right_from_idx(j, 2);
+                    self._shift_right_from_idx(j, 2);
                     self.array[j] = value;
                     self.array[j + 1] = 0;
                     self.split_end += 1;
@@ -57,7 +57,7 @@ pub const SequenceSplit = struct {
                 self.array[j + 1] += 1;
                 if (value + 1 == self.array[j + 2]) {
                     self.array[j + 1] += 1 + self.array[j + 3];
-                    self.shift_left_from_idx(j + 4, 2);
+                    self._shift_left_from_idx(j + 4, 2);
                     self.split_end -= 1;
                 }
                 return;
@@ -71,7 +71,24 @@ pub const SequenceSplit = struct {
         self.split_end += 1;
     }
 
-    pub fn shift_right_from_idx(self: *Self, start_idx: usize, shift_increment: usize) void {
+    pub fn print_debug(self: *Self) void {
+        var i: usize = 0;
+        while (i < self.split_end) : (i += 1) {
+            std.debug.print("{}-{} ", .{ self.array[i * 2], self.array[i * 2 + 1] });
+        }
+        std.debug.print("\n", .{});
+    }
+
+    pub fn compute_len(self: *Self) usize {
+        var i: usize = 0;
+        var j: usize = 0;
+        while (i < self.split_end) : (i += 1) {
+            j += 1 + self.array[i + 1];
+        }
+        return j;
+    }
+
+    fn _shift_right_from_idx(self: *Self, start_idx: usize, shift_increment: usize) void {
         if (start_idx > self.array.len - 1) return; // TODO ERR?
         var i: usize = self.split_end * 2;
         while (i >= start_idx) : (i -= 1) {
@@ -82,7 +99,7 @@ pub const SequenceSplit = struct {
         }
     }
 
-    pub fn shift_left_from_idx(self: *Self, start_idx: usize, shift_increment: usize) void {
+    fn _shift_left_from_idx(self: *Self, start_idx: usize, shift_increment: usize) void {
         if (start_idx > self.array.len - 1) return; // TODO ERR
         if (shift_increment > self.array.len - start_idx) return; // TODO RETURN ERR?;
         var i: usize = start_idx;
@@ -90,14 +107,6 @@ pub const SequenceSplit = struct {
             if (i < shift_increment) continue;
             self.array[i - shift_increment] = self.array[i];
         }
-    }
-
-    pub fn print_debug(self: *Self) void {
-        var i: usize = 0;
-        while (i < self.split_end) : (i += 1) {
-            std.debug.print("{}-{} ", .{ self.array[i * 2], self.array[i * 2 + 1] });
-        }
-        std.debug.print("\n", .{});
     }
 };
 
@@ -109,30 +118,30 @@ test "test_sequence_split_shift_left" {
     sequence_split.array = [_]u16{ 1, 2, 3, 4, 0, 0 } ++ [_]u16{0} ** (constants.MAX_LEN_FOR_SEQUENCE_SPLIT - 6);
 
     // valid
-    sequence_split.shift_left_from_idx(3, 2);
+    sequence_split._shift_left_from_idx(3, 2);
     try std.testing.expectEqual([_]u16{ 1, 4, 0, 0, 0 }, sequence_split.array[0..5].*);
 
     // overflow
     sequence_split.array = [_]u16{ 1, 2, 3, 4, 0, 0 } ++ [_]u16{0} ** (constants.MAX_LEN_FOR_SEQUENCE_SPLIT - 6);
-    sequence_split.shift_left_from_idx(1, 2);
+    sequence_split._shift_left_from_idx(1, 2);
     try std.testing.expectEqual([_]u16{ 3, 4, 0, 0, 0 }, sequence_split.array[0..5].*);
 
     // error case (silenced for now)
     sequence_split.array = [_]u16{ 1, 2, 3, 4, 0, 0 } ++ [_]u16{0} ** (constants.MAX_LEN_FOR_SEQUENCE_SPLIT - 6);
-    sequence_split.shift_left_from_idx(20, 1);
+    sequence_split._shift_left_from_idx(20, 1);
 
     sequence_split.array = [_]u16{ 1, 2, 3, 4, 0, 0 } ++ [_]u16{0} ** (constants.MAX_LEN_FOR_SEQUENCE_SPLIT - 6);
-    sequence_split.shift_left_from_idx(3, 100);
+    sequence_split._shift_left_from_idx(3, 100);
 }
 
 test "test_sequence_split_right" {
     var sequence_split = SequenceSplit.init();
     sequence_split.array = [_]u16{ 1, 2, 3, 4, 0, 0 } ++ [_]u16{0} ** (constants.MAX_LEN_FOR_SEQUENCE_SPLIT - 6);
     sequence_split.split_end = 5;
-    sequence_split.shift_right_from_idx(1, 2);
+    sequence_split._shift_right_from_idx(1, 2);
     try std.testing.expectEqual([_]u16{ 1, 2, 3, 2, 3, 4 }, sequence_split.array[0..6].*);
     sequence_split.array = [_]u16{ 1, 2, 3, 4, 0, 0 } ++ [_]u16{0} ** (constants.MAX_LEN_FOR_SEQUENCE_SPLIT - 6);
-    sequence_split.shift_right_from_idx(1, 100);
+    sequence_split._shift_right_from_idx(1, 100);
     try std.testing.expectEqual([_]u16{ 1, 2, 3, 4, 0 }, sequence_split.array[0..5].*);
 }
 
