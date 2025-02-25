@@ -1,7 +1,9 @@
 pub const MAX_FILE_IN_DIR = 1024;
 pub const MAX_SPLIT_IN_SEQUENCE = 10;
+
 pub const MAX_STR_LEN_ENTRY = 256;
 pub const MAX_STR_LEN_PATTERN = 128;
 pub const MAX_STR_LEN_OWNER = 50;
+
 pub const MAX_LEN_FOR_SEQUENCE_SPLIT = 512;
 pub const MAX_DISPLAYED_ISOLATED_FILE = 3;

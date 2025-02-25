@@ -1,23 +1,23 @@
 const std = @import("std");
 const constants = @import("constants.zig");
-const string_on_stack = @import("string_on_stack.zig");
+const string = @import("string.zig");
 
 const fs = std.fs;
 // const DirEntry = fs.Dir.Entry;
 const Dir = fs.Dir;
 const FileKind = fs.File.Kind;
-const StringOnStack = string_on_stack.StringOnStack;
+const StringLongUnicode = string.StringLongUnicode;
 
 // CustomDirEntry with StackOnStrings. name dooes not belong to me, only memory view.
 
 pub const DirContent = struct {
     pub const DirEntry = struct {
-        name: StringOnStack(constants.MAX_STR_LEN_ENTRY),
+        name: StringLongUnicode,
         kind: FileKind,
     };
 
     const default_dir_entry = DirEntry{
-        .name = StringOnStack(constants.MAX_STR_LEN_ENTRY).init(),
+        .name = StringLongUnicode.init(),
         .kind = .file,
     };
     const Self = @This();

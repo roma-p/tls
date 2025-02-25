@@ -1,17 +1,21 @@
 const std = @import("std");
+const constants = @import("constants.zig");
 
-// The floor is malloc.
-pub fn StringOnStack(comptime max_len: usize) type {
+// not yet unicode...
+pub const StringLongUnicode = String(constants.MAX_STR_LEN_ENTRY, u8);
+pub const StringShortUnicode = String(constants.MAX_STR_LEN_OWNER, u8);
+
+pub fn String(comptime max_len: usize, comptime string_type: type) type {
     return struct {
-        array: [max_len]u8,
+        array: [max_len]string_type,
         str_len: usize,
-        _append_number_buffer: [16]u8,
+        _append_number_buffer: [16]string_type,
 
         const Self = @This();
 
         pub fn init() Self {
             return Self{
-                .array = [_]u8{' '} ** max_len,
+                .array = [_]string_type{' '} ** max_len,
                 .str_len = 0,
                 ._append_number_buffer = undefined,
             };
@@ -30,13 +34,13 @@ pub fn StringOnStack(comptime max_len: usize) type {
             self.array = undefined;
         }
 
-        pub fn append_char(self: *Self, char: u8) void {
+        pub fn append_char(self: *Self, char: string_type) void {
             if (self.str_len == self.array.len) return;
             self.array[self.str_len] = char;
             self.str_len += 1;
         }
 
-        pub fn append_string(self: *Self, str: []const u8) void {
+        pub fn append_string(self: *Self, str: []const string_type) void {
             var i: usize = 0;
             var max_i: usize = 0;
 
@@ -56,11 +60,11 @@ pub fn StringOnStack(comptime max_len: usize) type {
             comptime T: type,
             number: T,
             left_margin: ?usize,
-            comptime zero_padding: ?[]const u8,
+            comptime zero_padding: ?[]const string_type,
         ) !void {
             const zp = if (zero_padding == null) "0" else zero_padding.?;
 
-            var num_as_string_tmp: []const u8 = undefined;
+            var num_as_string_tmp: []const string_type = undefined;
             if (@mod(number, 1) == 0) {
                 num_as_string_tmp = try std.fmt.bufPrint(
                     &self._append_number_buffer,
@@ -96,14 +100,14 @@ pub fn StringOnStack(comptime max_len: usize) type {
             self.str_len -= @min(trim_range, self.str_len);
         }
 
-        pub fn get_slice(self: *const Self) []const u8 {
+        pub fn get_slice(self: *const Self) []const string_type {
             return self.array[0..self.str_len];
         }
     };
 }
 
 test "append_str" {
-    var str1 = StringOnStack(10).init();
+    var str1 = String(10, u8).init();
     str1.append_string("1234");
     try std.testing.expectEqualSlices(u8, "1234", str1.get_slice());
     str1.append_string("5678");
@@ -115,21 +119,21 @@ test "append_str" {
 }
 
 test "append_number" {
-    var str1 = StringOnStack(10).init();
+    var str1 = String(10, u8).init();
     try str1.append_number(u16, 45, null, null);
     try std.testing.expectEqualSlices(u8, "45", str1.get_slice());
     try str1.append_number(u8, 12, null, null);
     try std.testing.expectEqualSlices(u8, "4512", str1.get_slice());
     str1.deinit();
-    var str2 = StringOnStack(10).init();
+    var str2 = String(10, u8).init();
     try str2.append_number(u16, 45, 4, null);
     try std.testing.expectEqualSlices(u8, "  45", str2.get_slice());
     str2.deinit();
-    var str3 = StringOnStack(10).init();
+    var str3 = String(10, u8).init();
     try str3.append_number(u16, 45, 1, "0");
     try std.testing.expectEqualSlices(u8, "45", str3.get_slice());
     str3.deinit();
-    var str4 = StringOnStack(10).init();
+    var str4 = String(10, u8).init();
     try str4.append_number(u16, 4, null, "2");
     try std.testing.expectEqualSlices(u8, "04", str4.get_slice());
     str4.deinit();

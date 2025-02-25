@@ -3,7 +3,7 @@ const fs = std.fs;
 
 const sequence_split_mod = @import("sequence_split.zig");
 const filename_comp = @import("filename_comp.zig");
-const string_on_stack = @import("string_on_stack.zig");
+const string = @import("string.zig");
 const constants = @import("constants.zig");
 const _dir_content = @import("dir_content.zig");
 const DirContent = _dir_content.DirContent;
@@ -11,11 +11,11 @@ const DirContent = _dir_content.DirContent;
 dir_content: DirContent,
 
 sequence_split: sequence_split_mod.SequenceSplit,
-pattern_before: string_on_stack.StringOnStack(constants.MAX_STR_LEN_PATTERN),
-pattern_after: string_on_stack.StringOnStack(constants.MAX_STR_LEN_PATTERN),
+pattern_before: string.StringLongUnicode,
+pattern_after: string.StringLongUnicode,
 
-filename_buffer_1: string_on_stack.StringOnStack(constants.MAX_STR_LEN_PATTERN),
-filename_buffer_2: string_on_stack.StringOnStack(constants.MAX_STR_LEN_PATTERN),
+filename_buffer_1: string.StringLongUnicode,
+filename_buffer_2: string.StringLongUnicode,
 
 // missing here: multiple sequences. flag to capture or not rights.
 
@@ -25,10 +25,10 @@ pub fn init() Self {
     return Self{
         .dir_content = DirContent.init(),
         .sequence_split = sequence_split_mod.SequenceSplit.init(),
-        .pattern_after = string_on_stack.StringOnStack(constants.MAX_STR_LEN_PATTERN).init(), // TODO: add type
-        .pattern_before = string_on_stack.StringOnStack(constants.MAX_STR_LEN_PATTERN).init(),
-        .filename_buffer_1 = string_on_stack.StringOnStack(constants.MAX_STR_LEN_PATTERN).init(),
-        .filename_buffer_2 = string_on_stack.StringOnStack(constants.MAX_STR_LEN_PATTERN).init(),
+        .pattern_after = string.StringLongUnicode.init(),
+        .pattern_before = string.StringLongUnicode.init(),
+        .filename_buffer_1 = string.StringLongUnicode.init(),
+        .filename_buffer_2 = string.StringLongUnicode.init(),
     };
 }
 

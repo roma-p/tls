@@ -8,8 +8,9 @@ const sequence_formatter = @import("sequence_formatter.zig");
 const size_formatter = @import("size_formatter.zig");
 const SequenceSplit = sequence_split.SequenceSplit;
 const filename_comp = @import("filename_comp.zig");
-const string_on_stack = @import("string_on_stack.zig");
-const StringOnStack = string_on_stack.StringOnStack;
+const string = @import("string.zig");
+const StringLongUnicode = string.StringLongUnicode;
+const StringShortUnicode = string.StringShortUnicode;
 const constants = @import("constants.zig");
 const file_stat = @import("file_stat.zig");
 const permission = @import("permission.zig");
@@ -25,7 +26,7 @@ pub fn main() !void {
     const dir = try fs.cwd().openDir(".", .{ .access_sub_paths = false, .iterate = true });
     var writer = std.io.getStdOut().writer();
 
-    var term_str_out = StringOnStack(constants.MAX_STR_LEN_ENTRY).init();
+    var term_str_out = StringLongUnicode.init();
     var seq_parser = sequence_parser.init();
     term_str_out.deinit();
 
