@@ -11,7 +11,7 @@ const StringOnStack = string_on_stack.StringOnStack;
 // CustomDirEntry with StackOnStrings. name dooes not belong to me, only memory view.
 
 pub const DirContent = struct {
-    const DirEntry = struct {
+    pub const DirEntry = struct {
         name: StringOnStack(constants.MAX_STR_LEN_ENTRY),
         kind: FileKind,
     };

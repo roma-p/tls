@@ -17,13 +17,15 @@ pattern_after: string_on_stack.StringOnStack(constants.MAX_STR_LEN_PATTERN),
 filename_buffer_1: string_on_stack.StringOnStack(constants.MAX_STR_LEN_PATTERN),
 filename_buffer_2: string_on_stack.StringOnStack(constants.MAX_STR_LEN_PATTERN),
 
+// missing here: multiple sequences. flag to capture or not rights.
+
 const Self = @This();
 
 pub fn init() Self {
     return Self{
         .dir_content = DirContent.init(),
         .sequence_split = sequence_split_mod.SequenceSplit.init(),
-        .pattern_after = string_on_stack.StringOnStack(constants.MAX_STR_LEN_PATTERN).init(),
+        .pattern_after = string_on_stack.StringOnStack(constants.MAX_STR_LEN_PATTERN).init(), // TODO: add type
         .pattern_before = string_on_stack.StringOnStack(constants.MAX_STR_LEN_PATTERN).init(),
         .filename_buffer_1 = string_on_stack.StringOnStack(constants.MAX_STR_LEN_PATTERN).init(),
         .filename_buffer_2 = string_on_stack.StringOnStack(constants.MAX_STR_LEN_PATTERN).init(),
@@ -53,11 +55,7 @@ pub fn deinit(self: *Self) void {
     self.filename_buffer_2 = undefined;
 }
 
-// TODO: rewrite to work with useless files...
 pub fn get_seq_info(self: *Self, dir: *const fs.Dir) !bool {
-    var has_list_one_file_in_dir: bool = false;
-    var has_list_two_file_in_dir: bool = false;
-
     self.dir_content.reset();
     self.filename_buffer_1.reset();
     self.filename_buffer_2.reset();
@@ -65,54 +63,60 @@ pub fn get_seq_info(self: *Self, dir: *const fs.Dir) !bool {
     try self.dir_content.populate(dir);
     const dir_content_slice = self.dir_content.get_slice();
 
-    var i: usize = 0;
+    if (dir_content_slice.len == 0) return false;
+
+    var entry_buffer_1: DirContent.DirEntry = dir_content_slice[0];
+    var entry_buffer_2: DirContent.DirEntry = undefined;
+
+    var is_sequence_found = false;
+    var has_extra_file = false; // TODO: use me
+
+    var i: usize = 1;
 
     // find the first filename used to compare to the others...
     while (i < dir_content_slice.len) {
-        var e = dir_content_slice[i];
+        const e = dir_content_slice[i];
         i += 1;
         switch (e.kind) {
             .file => {
-                self.filename_buffer_1.append_string(e.name.get_slice());
-                has_list_one_file_in_dir = true;
-                break;
+                entry_buffer_2 = e;
+
+                const filename_1 = entry_buffer_1.name.get_slice();
+                const filename_2 = entry_buffer_2.name.get_slice();
+
+                const two_file_cmp_ret = try filename_comp.check_is_sequence_using_two_filenames(
+                    filename_1,
+                    filename_2,
+                );
+
+                if (two_file_cmp_ret.@"0" == 0) {
+                    is_sequence_found = true;
+                    break;
+                } else {
+                    entry_buffer_1 = entry_buffer_2;
+                    has_extra_file = true;
+                }
             },
-            else => return false,
+            else => continue,
         }
     }
 
-    if (!has_list_one_file_in_dir) return false;
+    if (!is_sequence_found) return false;
 
-    // looking for second filename : used to look for sequence pattern.
-    while (i < dir_content_slice.len) {
-        var e = dir_content_slice[i];
-        i += 1;
-        switch (e.kind) {
-            .file => {
-                self.filename_buffer_2.append_string(e.name.get_slice());
-                has_list_two_file_in_dir = true;
-                break;
-            },
-            else => return false,
-        }
-    }
+    const filename_1 = entry_buffer_1.name.get_slice();
+    const filename_2 = entry_buffer_2.name.get_slice();
 
-    if (!has_list_two_file_in_dir) return false;
-
-    const first_filename = self.filename_buffer_1.get_slice();
-    const secd_filename = self.filename_buffer_2.get_slice();
-
+    // default
     const two_file_cmp_ret = try filename_comp.check_is_sequence_using_two_filenames(
-        first_filename,
-        secd_filename,
+        filename_1,
+        filename_2,
     );
-    if (two_file_cmp_ret.@"0" == 1) return false;
 
     self.sequence_split.add_value(two_file_cmp_ret.@"3");
     self.sequence_split.add_value(two_file_cmp_ret.@"4");
 
-    const pattern_before = first_filename[0..two_file_cmp_ret.@"1"];
-    const pattern_after = first_filename[two_file_cmp_ret.@"2"..];
+    const pattern_before = filename_1[0..two_file_cmp_ret.@"1"];
+    const pattern_after = filename_2[two_file_cmp_ret.@"2"..];
 
     while (i < dir_content_slice.len) {
         var e = dir_content_slice[i];
@@ -125,12 +129,12 @@ pub fn get_seq_info(self: *Self, dir: *const fs.Dir) !bool {
                     pattern_after,
                 );
                 if (seq_nb == null) {
-                    return false;
+                    continue;
                 } else {
                     self.sequence_split.add_value(seq_nb.?);
                 }
             },
-            else => return false,
+            else => continue,
         }
     }
 
