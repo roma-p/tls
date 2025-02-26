@@ -79,7 +79,7 @@ pub const SequenceSplit = struct {
         std.debug.print("\n", .{});
     }
 
-    pub fn compute_len(self: *Self) usize {
+    pub fn compute_len(self: *const Self) usize {
         var i: usize = 0;
         var j: usize = 0;
         while (i < self.split_end) : (i += 1) {

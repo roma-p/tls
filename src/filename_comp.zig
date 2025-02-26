@@ -23,18 +23,26 @@ pub fn split_filename_at_numbers(filename: []const u8) struct { [50]usize, usize
     return .{ ret, ret_i };
 }
 
+pub const SequenceResult = struct {
+    is_sequence: u1, // u1 : bool (0: is sequence, 1 not sequence)
+    number_start_idx: usize, // idx of filename_1 and _2 where number start.
+    number_end_idx_filename_1: usize, // idx of filename_1 and _2 where number start.
+    seq_number_filenam_1: u16, // sequence number on filename_1
+    seq_number_filenam_2: u16, // sequence number on filename_2
+};
+
+pub const not_a_sequence = SequenceResult{
+    .is_sequence = 1,
+    .number_start_idx = undefined,
+    .number_end_idx_filename_1 = undefined,
+    .seq_number_filenam_1 = undefined,
+    .seq_number_filenam_2 = undefined,
+};
+
 pub fn check_is_sequence_using_two_filenames(
     filename_1: []const u8,
     filename_2: []const u8,
-) !struct { u1, usize, usize, u16, u16 } {
-    // u1 : bool (0: is sequence, 1 not sequence)
-    // usize: idx of filename_1 and _2 where number start.
-    // usize: idx of filename_1 where number ends.
-    // u16: sequence number on filename_1
-    // u16: sequence number on filename_2
-
-    const ret_not_a_sequence = .{ 1, 0, 0, 0, 0 };
-
+) !SequenceResult {
     var diff_number_found: bool = false;
     var diff_number_start_idx: usize = 0;
     var diff_number_end_idx_filename_1: usize = 0;
@@ -45,7 +53,7 @@ pub fn check_is_sequence_using_two_filenames(
     const split_info_file_2 = split_filename_at_numbers(filename_2);
 
     if (split_info_file_1.@"1" != split_info_file_2.@"1") {
-        return ret_not_a_sequence;
+        return not_a_sequence;
     }
     const split_number = split_info_file_1.@"1";
 
@@ -64,7 +72,7 @@ pub fn check_is_sequence_using_two_filenames(
         const slice_2 = filename_2[buffer_last_split_idx_file_2..split_idx_file_2];
 
         if (last_c_type == 0) {
-            if (!std.mem.eql(u8, slice_1, slice_2)) return ret_not_a_sequence;
+            if (!std.mem.eql(u8, slice_1, slice_2)) return not_a_sequence;
         } else {
             if (!std.mem.eql(u8, slice_1, slice_2)) {
                 const nbr_1 = try std.fmt.parseInt(u16, slice_1, 10);
@@ -73,7 +81,7 @@ pub fn check_is_sequence_using_two_filenames(
                 if (nbr_1 != nbr_2) {
                     if (diff_number_found) {
                         // can not have multiple diff number in filenames in a seq.
-                        return ret_not_a_sequence;
+                        return not_a_sequence;
                     } else {
                         diff_number_found = true;
                         diff_number_start_idx = buffer_last_split_idx_file_1;
@@ -91,13 +99,13 @@ pub fn check_is_sequence_using_two_filenames(
         buffer_last_split_idx_file_1 = split_idx_file_1;
         buffer_last_split_idx_file_2 = split_idx_file_2;
     }
-    if (!diff_number_found) return ret_not_a_sequence;
-    return .{
-        0,
-        diff_number_start_idx,
-        diff_number_end_idx_filename_1,
-        number_1,
-        number_2,
+    if (!diff_number_found) return not_a_sequence;
+    return SequenceResult{
+        .is_sequence = 0,
+        .number_start_idx = diff_number_start_idx,
+        .number_end_idx_filename_1 = diff_number_end_idx_filename_1,
+        .seq_number_filenam_1 = number_1,
+        .seq_number_filenam_2 = number_2,
     };
 }
 
@@ -139,103 +147,132 @@ pub fn check_file_belong_to_sequence(
 test "check_is_sequence_using_two_filenames" {
     // todo: remove this try
 
-    // test valid image sequence
-    const test_1 = try check_is_sequence_using_two_filenames(
-        "trucv001.001.exr",
-        "trucv001.002.exr",
+    try std.testing.expectEqual(
+        SequenceResult{
+            .is_sequence = 0,
+            .number_start_idx = 9,
+            .number_end_idx_filename_1 = 12,
+            .seq_number_filenam_1 = 1,
+            .seq_number_filenam_2 = 2,
+        },
+        try check_is_sequence_using_two_filenames(
+            "trucv001.001.exr",
+            "trucv001.002.exr",
+        ),
     );
-    try std.testing.expectEqual(0, test_1.@"0");
-    try std.testing.expectEqual(9, test_1.@"1");
-    try std.testing.expectEqual(12, test_1.@"2");
-    try std.testing.expectEqual(1, test_1.@"3");
-    try std.testing.expectEqual(2, test_1.@"4");
 
-    const test_2 = try check_is_sequence_using_two_filenames(
-        "trucv001.001.exr",
-        "trucv001.2.exr",
+    try std.testing.expectEqual(
+        SequenceResult{
+            .is_sequence = 0,
+            .number_start_idx = 9,
+            .number_end_idx_filename_1 = 12,
+            .seq_number_filenam_1 = 1,
+            .seq_number_filenam_2 = 2,
+        },
+        try check_is_sequence_using_two_filenames(
+            "trucv001.001.exr",
+            "trucv001.2.exr",
+        ),
     );
-    try std.testing.expectEqual(0, test_2.@"0");
-    try std.testing.expectEqual(9, test_2.@"1");
-    try std.testing.expectEqual(12, test_2.@"2");
-    try std.testing.expectEqual(1, test_2.@"3");
-    try std.testing.expectEqual(2, test_2.@"4");
 
-    const test_3 = try check_is_sequence_using_two_filenames(
-        "trucv001.001.exr",
-        "trucv001.0010.exr",
+    try std.testing.expectEqual(
+        SequenceResult{
+            .is_sequence = 0,
+            .number_start_idx = 9,
+            .number_end_idx_filename_1 = 12,
+            .seq_number_filenam_1 = 1,
+            .seq_number_filenam_2 = 10,
+        },
+        try check_is_sequence_using_two_filenames(
+            "trucv001.001.exr",
+            "trucv001.0010.exr",
+        ),
     );
-    try std.testing.expectEqual(0, test_3.@"0");
-    try std.testing.expectEqual(9, test_3.@"1");
-    try std.testing.expectEqual(12, test_3.@"2");
-    try std.testing.expectEqual(1, test_3.@"3");
-    try std.testing.expectEqual(10, test_3.@"4");
 
-    const test_4 = try check_is_sequence_using_two_filenames(
-        "trucv001.4.exr",
-        "trucv001.150.exr",
+    try std.testing.expectEqual(
+        SequenceResult{
+            .is_sequence = 0,
+            .number_start_idx = 9,
+            .number_end_idx_filename_1 = 10,
+            .seq_number_filenam_1 = 4,
+            .seq_number_filenam_2 = 150,
+        },
+        try check_is_sequence_using_two_filenames(
+            "trucv001.4.exr",
+            "trucv001.150.exr",
+        ),
     );
-    try std.testing.expectEqual(0, test_4.@"0");
-    try std.testing.expectEqual(9, test_4.@"1");
-    try std.testing.expectEqual(10, test_4.@"2");
-    try std.testing.expectEqual(4, test_4.@"3");
-    try std.testing.expectEqual(150, test_4.@"4");
 
     // test unvalid image sequence
     const test_5 = try check_is_sequence_using_two_filenames(
         "trucv001.001.exr",
         "trucv002.002.exr",
     );
-    try std.testing.expectEqual(1, test_5.@"0");
+    try std.testing.expectEqual(1, test_5.is_sequence);
 
     const test_6 = try check_is_sequence_using_two_filenames(
         "trucv1.001.exr",
         "trucv10.002.exr",
     );
-    try std.testing.expectEqual(1, test_6.@"0");
+    try std.testing.expectEqual(1, test_6.is_sequence);
 
     const test_7 = try check_is_sequence_using_two_filenames(
         "trucv001.001.c4d",
         "trucv002.002.exr",
     );
-    try std.testing.expectEqual(1, test_7.@"0");
+    try std.testing.expectEqual(1, test_7.is_sequence);
 
     // test when seq is beginning.
-    const test_8 = try check_is_sequence_using_two_filenames(
-        "001.trucv001.001.exr",
-        "002.trucv001.001.exr",
+
+    try std.testing.expectEqual(
+        SequenceResult{
+            .is_sequence = 0,
+            .number_start_idx = 0,
+            .number_end_idx_filename_1 = 3,
+            .seq_number_filenam_1 = 1,
+            .seq_number_filenam_2 = 2,
+        },
+        try check_is_sequence_using_two_filenames(
+            "001.trucv001.001.exr",
+            "002.trucv001.001.exr",
+        ),
     );
-    try std.testing.expectEqual(0, test_8.@"0");
-    try std.testing.expectEqual(0, test_8.@"1");
-    try std.testing.expectEqual(3, test_8.@"2");
-    try std.testing.expectEqual(1, test_8.@"3");
-    try std.testing.expectEqual(2, test_8.@"4");
 
     const test_9 = try check_is_sequence_using_two_filenames(
         "001.trucv001.001.exr",
         "002.trucv002.001.exr",
     );
-    try std.testing.expectEqual(1, test_9.@"0");
+    try std.testing.expectEqual(1, test_9.is_sequence);
 
     // test real prod usecase
-    const test_10 = try check_is_sequence_using_two_filenames(
-        "089_06_surf-v001.0040.exr",
-        "089_06_surf-v001.0041.exr",
-    );
-    try std.testing.expectEqual(0, test_10.@"0");
-    try std.testing.expectEqual(17, test_10.@"1");
-    try std.testing.expectEqual(21, test_10.@"2");
-    try std.testing.expectEqual(40, test_10.@"3");
-    try std.testing.expectEqual(41, test_10.@"4");
 
-    const test_11 = try check_is_sequence_using_two_filenames(
-        "089_06_surf-v001.ma",
-        "089_06_surf-v002.ma",
+    try std.testing.expectEqual(
+        SequenceResult{
+            .is_sequence = 0,
+            .number_start_idx = 17,
+            .number_end_idx_filename_1 = 21,
+            .seq_number_filenam_1 = 40,
+            .seq_number_filenam_2 = 41,
+        },
+        try check_is_sequence_using_two_filenames(
+            "089_06_surf-v001.0040.exr",
+            "089_06_surf-v001.0041.exr",
+        ),
     );
-    try std.testing.expectEqual(0, test_11.@"0");
-    try std.testing.expectEqual(13, test_11.@"1");
-    try std.testing.expectEqual(16, test_11.@"2");
-    try std.testing.expectEqual(1, test_11.@"3");
-    try std.testing.expectEqual(2, test_11.@"4");
+
+    try std.testing.expectEqual(
+        SequenceResult{
+            .is_sequence = 0,
+            .number_start_idx = 13,
+            .number_end_idx_filename_1 = 16,
+            .seq_number_filenam_1 = 1,
+            .seq_number_filenam_2 = 2,
+        },
+        try check_is_sequence_using_two_filenames(
+            "089_06_surf-v001.ma",
+            "089_06_surf-v002.ma",
+        ),
+    );
 }
 
 test "split_filename_at_numbers" {

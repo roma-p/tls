@@ -5,7 +5,7 @@ const constants = @import("constants.zig");
 pub fn format_sequence(
     pattern_before: []const u8,
     pattern_after: []const u8,
-    ptr_sequence_array: *[constants.MAX_LEN_FOR_SEQUENCE_SPLIT]u16,
+    ptr_sequence_array: *const [constants.MAX_LEN_FOR_SEQUENCE_SPLIT]u16,
     split_nbr: usize,
     str_out: *string.StringLongUnicode,
 ) !void {
@@ -15,7 +15,7 @@ pub fn format_sequence(
 }
 
 fn format_sequence_number_part(
-    ptr_sequence_array: *[constants.MAX_LEN_FOR_SEQUENCE_SPLIT]u16,
+    ptr_sequence_array: *const [constants.MAX_LEN_FOR_SEQUENCE_SPLIT]u16,
     split_nbr: usize,
     str_out: *string.StringLongUnicode,
 ) !void {

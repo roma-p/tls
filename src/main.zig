@@ -91,14 +91,16 @@ pub fn main() !void {
             .file => {},
             .directory => {
                 const d = try dir.openDir(name_slice, .{ .no_follow = false, .iterate = true });
-                const is_seq = try seq_parser.get_seq_info(&d);
-                if (is_seq) {
+                try seq_parser.populate(&d);
+                const seq_or_null = seq_parser.get_longer_sequence();
+                if (seq_or_null != null) {
+                    const seq = seq_or_null.?;
                     term_str_out.append_string(" :: ");
                     try sequence_formatter.format_sequence(
-                        seq_parser.pattern_before.get_slice(),
-                        seq_parser.pattern_after.get_slice(),
-                        &seq_parser.sequence_split.array,
-                        seq_parser.sequence_split.split_end,
+                        seq.pattern_before.get_slice(),
+                        seq.pattern_after.get_slice(),
+                        &seq.sequence_split.array,
+                        seq.sequence_split.split_end,
                         &term_str_out,
                     );
                     seq_parser.reset();
