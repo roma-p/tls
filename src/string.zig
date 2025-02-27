@@ -61,22 +61,23 @@ pub fn String(comptime max_len: usize, comptime string_type: type) type {
             number: T,
             left_margin: ?usize,
             comptime zero_padding: ?usize,
-        ) !void {
+        ) void {
             const zp = if (zero_padding == null) "0" else _conv_zero_padd_to_str(zero_padding.?);
 
             var num_as_string_tmp: []const string_type = undefined;
+            const num_as_string_err: []const string_type = "??";
             if (@mod(number, 1) == 0) {
-                num_as_string_tmp = try std.fmt.bufPrint(
+                num_as_string_tmp = std.fmt.bufPrint(
                     &self._append_number_buffer,
                     "{d:0>" ++ zp ++ ".0}",
                     .{number},
-                );
+                ) catch num_as_string_err;
             } else {
-                num_as_string_tmp = try std.fmt.bufPrint(
+                num_as_string_tmp = std.fmt.bufPrint(
                     &self._append_number_buffer,
                     "{d:0>" ++ zp ++ ".1}",
                     .{number},
-                );
+                ) catch num_as_string_err;
             }
 
             if (left_margin != null and num_as_string_tmp.len < left_margin.?) {
@@ -137,21 +138,21 @@ test "append_str" {
 
 test "append_number" {
     var str1 = String(10, u8).init();
-    try str1.append_number(u16, 45, null, null);
+    str1.append_number(u16, 45, null, null);
     try std.testing.expectEqualSlices(u8, "45", str1.get_slice());
-    try str1.append_number(u8, 12, null, null);
+    str1.append_number(u8, 12, null, null);
     try std.testing.expectEqualSlices(u8, "4512", str1.get_slice());
     str1.deinit();
     var str2 = String(10, u8).init();
-    try str2.append_number(u16, 45, 4, null);
+    str2.append_number(u16, 45, 4, null);
     try std.testing.expectEqualSlices(u8, "  45", str2.get_slice());
     str2.deinit();
     var str3 = String(10, u8).init();
-    try str3.append_number(u16, 45, 1, 0);
+    str3.append_number(u16, 45, 1, 0);
     try std.testing.expectEqualSlices(u8, "45", str3.get_slice());
     str3.deinit();
     var str4 = String(10, u8).init();
-    try str4.append_number(u16, 4, null, 2);
+    str4.append_number(u16, 4, null, 2);
     try std.testing.expectEqualSlices(u8, "04", str4.get_slice());
     str4.deinit();
 }

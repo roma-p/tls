@@ -56,9 +56,9 @@ pub fn main() !void {
         if (is_size_to_print) {
             const size_info = size_format.@"2";
             if (size_info == 0) {
-                try term_str_out.append_number(f32, size_format.@"0", 6, null);
+                term_str_out.append_number(f32, size_format.@"0", 6, null);
             } else if (size_info == 1) {
-                try term_str_out.append_number(f32, size_format.@"0", 5, null);
+                term_str_out.append_number(f32, size_format.@"0", 5, null);
                 term_str_out.append_char(size_format.@"1");
             } else {
                 term_str_out.append_string("  huge");
@@ -72,16 +72,16 @@ pub fn main() !void {
         term_str_out.append_string("\t");
 
         const date_info = date_formatter.get_date_info(stat_refined.mtime);
-        try term_str_out.append_number(u8, date_info.@"1", 2, null);
+        term_str_out.append_number(u8, date_info.@"1", 2, null);
         term_str_out.append_char(' ');
         term_str_out.append_string(date_formatter.conv_mont_id_to_trigram(date_info.@"2"));
         term_str_out.append_char(' ');
         if (date_info.@"0" == 0) {
-            try term_str_out.append_number(u8, date_info.@"4".?, 2, 2);
+            term_str_out.append_number(u8, date_info.@"4".?, 2, 2);
             term_str_out.append_char(':');
-            try term_str_out.append_number(u8, date_info.@"5".?, 2, 2);
+            term_str_out.append_number(u8, date_info.@"5".?, 2, 2);
         } else {
-            try term_str_out.append_number(u16, date_info.@"3".?, 4, null);
+            term_str_out.append_number(u16, date_info.@"3".?, 4, null);
         }
         term_str_out.append_char(' ');
 
