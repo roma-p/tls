@@ -5,8 +5,8 @@ const sequence_split_mod = @import("sequence_split.zig");
 const filename_comp = @import("filename_comp.zig");
 const string = @import("string.zig");
 const constants = @import("constants.zig");
-const _dir_content = @import("dir_content.zig");
-const DirContent = _dir_content.DirContent;
+const dir_content = @import("dir_content.zig");
+const DirContent = dir_content.DirContent;
 
 _dir_content: DirContent,
 _sequence_info_buff: [100]SequenceInfo,
@@ -56,6 +56,9 @@ pub fn deinit(self: *Self) void {
     self._sequence_info_buff_len = undefined;
 }
 
+// TODO: 1. split into proper state machine.
+// TODO: 2. add posix support.
+// TODO: 3. add  idx of the first file of the dir (i) -> to know where to put it in the term.
 pub fn populate(self: *Self, dir: *const fs.Dir) !void {
     self._dir_content.reset();
     try self._dir_content.populate(dir);
@@ -73,8 +76,6 @@ pub fn populate(self: *Self, dir: *const fs.Dir) !void {
 
     var state = ParsingSeqState.LookingForSequence;
 
-    var sequence_result: filename_comp.SequenceResult = undefined;
-
     // find the first filename used to compare to the others...
     while (i < dir_content_slice.len) {
         const e = dir_content_slice[i];
@@ -82,28 +83,16 @@ pub fn populate(self: *Self, dir: *const fs.Dir) !void {
 
         if (state == ParsingSeqState.LookingForSequence) {
             switch (e.kind) {
+                // AS STATE...
                 .file => {
                     entry_buffer_2 = e;
-
-                    const filename_1 = entry_buffer_1.name.get_slice();
-                    const filename_2 = entry_buffer_2.name.get_slice();
-
-                    sequence_result = try filename_comp.check_is_sequence_using_two_filenames(
-                        filename_1,
-                        filename_2,
+                    const tmp = try _build_seq_info_if_seq(
+                        entry_buffer_1.name.get_slice(),
+                        entry_buffer_2.name.get_slice(),
                     );
-
-                    if (sequence_result.is_sequence == 0) {
+                    if (tmp != null) {
+                        self._sequence_info_buff[j] = tmp.?;
                         state = ParsingSeqState.ParsingSequence;
-
-                        const pattern_before = filename_1[0..sequence_result.number_start_idx];
-                        const pattern_after = filename_2[sequence_result.number_end_idx_filename_1..];
-
-                        self._sequence_info_buff[j] = SequenceInfo.init();
-                        self._sequence_info_buff[j].pattern_before.append_string(pattern_before);
-                        self._sequence_info_buff[j].pattern_after.append_string(pattern_after);
-                        self._sequence_info_buff[j].sequence_split.add_value(sequence_result.seq_number_filenam_1);
-                        self._sequence_info_buff[j].sequence_split.add_value(sequence_result.seq_number_filenam_2);
                     } else {
                         entry_buffer_1 = entry_buffer_2;
                         has_extra_file = true;
@@ -139,7 +128,6 @@ pub fn populate(self: *Self, dir: *const fs.Dir) !void {
     }
     if (state == ParsingSeqState.ParsingSequence) j += 1;
     self._sequence_info_buff_len = j;
-    return;
 }
 
 pub fn get_slice(self: *const Self) []SequenceInfo {
@@ -163,6 +151,29 @@ pub fn get_longer_sequence(self: *const Self) ?SequenceInfo {
     return ret;
 }
 
+fn _build_seq_info_if_seq(
+    filename_1: []const u8,
+    filename_2: []const u8,
+) !?SequenceInfo {
+    const sequence_result = try filename_comp.check_is_sequence_using_two_filenames(
+        filename_1,
+        filename_2,
+    );
+    if (sequence_result.is_sequence == 0) {
+        const pattern_before = filename_1[0..sequence_result.number_start_idx];
+        const pattern_after = filename_2[sequence_result.number_end_idx_filename_1..];
+
+        var ret = SequenceInfo.init();
+        ret.pattern_before.append_string(pattern_before);
+        ret.pattern_after.append_string(pattern_after);
+        ret.sequence_split.add_value(sequence_result.seq_number_filenam_1);
+        ret.sequence_split.add_value(sequence_result.seq_number_filenam_2);
+        return ret;
+    } else {
+        return null;
+    }
+}
+
 test "get_seq_info" {
     var sequence_parser = Self.init();
     var dir = try fs.cwd().openDir("tests/seq_test", .{});
@@ -183,6 +194,4 @@ test "get_seq_info" {
         ".exr",
         b.?.pattern_after.get_slice(),
     );
-
-    // TODO: test me !
 }

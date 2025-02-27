@@ -18,6 +18,8 @@ const StatRefined = struct {
     mtime: u64,
 };
 
+// TODO: term entry?
+
 pub fn posix_stat(dir: Dir, path: []const u8) !StatRefined {
     const stat = try posix.fstatat(dir.fd, path, 0);
     const psswd = c.getpwuid(stat.uid);
