@@ -32,7 +32,6 @@ pub fn posix_stat(dir: Dir, path: []const u8) !StatRefined {
         .owner_len = name_z_type.len,
         .mode = stat.mode,
         .size = @bitCast(stat.size),
-        // .mtime = @intCast(@as(i128, mtime.tv_sec) * std.time.ns_per_s + mtime.tv_nsec / 1_000_000_000),
         .mtime = @intCast(@as(i128, mtime.tv_sec)),
     };
 

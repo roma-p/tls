@@ -155,11 +155,12 @@ fn _build_seq_info_if_seq(
     filename_1: []const u8,
     filename_2: []const u8,
 ) !?SequenceInfo {
-    const sequence_result = try filename_comp.check_is_sequence_using_two_filenames(
+    const sequence_result_or_null = try filename_comp.check_is_sequence_using_two_filenames(
         filename_1,
         filename_2,
     );
-    if (sequence_result.is_sequence == 0) {
+    if (sequence_result_or_null != null) {
+        const sequence_result = sequence_result_or_null.?;
         const pattern_before = filename_1[0..sequence_result.number_start_idx];
         const pattern_after = filename_2[sequence_result.number_end_idx_filename_1..];
 
