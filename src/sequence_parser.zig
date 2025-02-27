@@ -86,7 +86,7 @@ pub fn populate(self: *Self, dir: *const fs.Dir) !void {
                 // AS STATE...
                 .file => {
                     entry_buffer_2 = e;
-                    const tmp = try _build_seq_info_if_seq(
+                    const tmp = _build_seq_info_if_seq(
                         entry_buffer_1.name.get_slice(),
                         entry_buffer_2.name.get_slice(),
                     );
@@ -104,7 +104,7 @@ pub fn populate(self: *Self, dir: *const fs.Dir) !void {
             var finish_parsing_sequence = false;
             switch (e.kind) {
                 .file => {
-                    const seq_nb = try filename_comp.check_file_belong_to_sequence(
+                    const seq_nb = filename_comp.check_file_belong_to_sequence(
                         e.name.get_slice(),
                         self._sequence_info_buff[j].pattern_before.get_slice(),
                         self._sequence_info_buff[j].pattern_after.get_slice(),
@@ -154,8 +154,8 @@ pub fn get_longer_sequence(self: *const Self) ?SequenceInfo {
 fn _build_seq_info_if_seq(
     filename_1: []const u8,
     filename_2: []const u8,
-) !?SequenceInfo {
-    const sequence_result_or_null = try filename_comp.check_is_sequence_using_two_filenames(
+) ?SequenceInfo {
+    const sequence_result_or_null = filename_comp.check_is_sequence_using_two_filenames(
         filename_1,
         filename_2,
     );

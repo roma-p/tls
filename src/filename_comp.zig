@@ -11,7 +11,7 @@ pub const ResultCheckIsSequenceUsingTwoFilenames = struct {
 pub fn check_is_sequence_using_two_filenames(
     filename_1: []const u8,
     filename_2: []const u8,
-) !?ResultCheckIsSequenceUsingTwoFilenames {
+) ?ResultCheckIsSequenceUsingTwoFilenames {
     var diff_number_found: bool = false;
     var diff_number_start_idx: usize = 0;
     var diff_number_end_idx_filename_1: usize = 0;
@@ -44,8 +44,8 @@ pub fn check_is_sequence_using_two_filenames(
             if (!std.mem.eql(u8, slice_1, slice_2)) return null;
         } else {
             if (!std.mem.eql(u8, slice_1, slice_2)) {
-                const nbr_1 = try std.fmt.parseInt(u16, slice_1, 10);
-                const nbr_2 = try std.fmt.parseInt(u16, slice_2, 10);
+                const nbr_1 = std.fmt.parseInt(u16, slice_1, 10) catch unreachable;
+                const nbr_2 = std.fmt.parseInt(u16, slice_2, 10) catch unreachable;
 
                 if (nbr_1 != nbr_2) {
                     if (diff_number_found) {
@@ -81,7 +81,7 @@ pub fn check_file_belong_to_sequence(
     filename: []const u8,
     pattern_before: []const u8,
     pattern_after: []const u8,
-) !?u16 {
+) ?u16 {
     if (filename.len < (pattern_before.len + 1 + pattern_after.len)) {
         return null;
     }
@@ -100,7 +100,7 @@ pub fn check_file_belong_to_sequence(
             break;
         }
     }
-    const ret = try std.fmt.parseInt(u16, filename[pattern_before.len..i], 10);
+    const ret = std.fmt.parseInt(u16, filename[pattern_before.len..i], 10) catch unreachable;
     if (filename.len - i != pattern_after.len) {
         return null;
     }
@@ -144,7 +144,7 @@ test "check_is_sequence_using_two_filenames" {
             .seq_number_filenam_1 = 1,
             .seq_number_filenam_2 = 2,
         },
-        try check_is_sequence_using_two_filenames(
+        check_is_sequence_using_two_filenames(
             "trucv001.001.exr",
             "trucv001.002.exr",
         ).?,
@@ -157,7 +157,7 @@ test "check_is_sequence_using_two_filenames" {
             .seq_number_filenam_1 = 1,
             .seq_number_filenam_2 = 2,
         },
-        try check_is_sequence_using_two_filenames(
+        check_is_sequence_using_two_filenames(
             "trucv001.001.exr",
             "trucv001.2.exr",
         ).?,
@@ -170,7 +170,7 @@ test "check_is_sequence_using_two_filenames" {
             .seq_number_filenam_1 = 1,
             .seq_number_filenam_2 = 10,
         },
-        try check_is_sequence_using_two_filenames(
+        check_is_sequence_using_two_filenames(
             "trucv001.001.exr",
             "trucv001.0010.exr",
         ).?,
@@ -183,26 +183,26 @@ test "check_is_sequence_using_two_filenames" {
             .seq_number_filenam_1 = 4,
             .seq_number_filenam_2 = 150,
         },
-        try check_is_sequence_using_two_filenames(
+        check_is_sequence_using_two_filenames(
             "trucv001.4.exr",
             "trucv001.150.exr",
         ).?,
     );
 
     // test unvalid image sequence
-    const test_5 = try check_is_sequence_using_two_filenames(
+    const test_5 = check_is_sequence_using_two_filenames(
         "trucv001.001.exr",
         "trucv002.002.exr",
     );
     try std.testing.expectEqual(null, test_5);
 
-    const test_6 = try check_is_sequence_using_two_filenames(
+    const test_6 = check_is_sequence_using_two_filenames(
         "trucv1.001.exr",
         "trucv10.002.exr",
     );
     try std.testing.expectEqual(null, test_6);
 
-    const test_7 = try check_is_sequence_using_two_filenames(
+    const test_7 = check_is_sequence_using_two_filenames(
         "trucv001.001.c4d",
         "trucv002.002.exr",
     );
@@ -217,13 +217,13 @@ test "check_is_sequence_using_two_filenames" {
             .seq_number_filenam_1 = 1,
             .seq_number_filenam_2 = 2,
         },
-        try check_is_sequence_using_two_filenames(
+        check_is_sequence_using_two_filenames(
             "001.trucv001.001.exr",
             "002.trucv001.001.exr",
         ).?,
     );
 
-    const test_9 = try check_is_sequence_using_two_filenames(
+    const test_9 = check_is_sequence_using_two_filenames(
         "001.trucv001.001.exr",
         "002.trucv002.001.exr",
     );
@@ -238,7 +238,7 @@ test "check_is_sequence_using_two_filenames" {
             .seq_number_filenam_1 = 40,
             .seq_number_filenam_2 = 41,
         },
-        try check_is_sequence_using_two_filenames(
+        check_is_sequence_using_two_filenames(
             "089_06_surf-v001.0040.exr",
             "089_06_surf-v001.0041.exr",
         ).?,
@@ -251,7 +251,7 @@ test "check_is_sequence_using_two_filenames" {
             .seq_number_filenam_1 = 1,
             .seq_number_filenam_2 = 2,
         },
-        try check_is_sequence_using_two_filenames(
+        check_is_sequence_using_two_filenames(
             "089_06_surf-v001.ma",
             "089_06_surf-v002.ma",
         ).?,
@@ -275,7 +275,7 @@ test "split_filename_at_numbers" {
 test "check_file_belong_to_sequence" {
     try std.testing.expectEqual(
         40,
-        try check_file_belong_to_sequence(
+        check_file_belong_to_sequence(
             "089_06_surf-v001.0040.exr",
             "089_06_surf-v001.",
             ".exr",
@@ -283,7 +283,7 @@ test "check_file_belong_to_sequence" {
     );
     try std.testing.expectEqual(
         null,
-        try check_file_belong_to_sequence(
+        check_file_belong_to_sequence(
             "089_06_surf-v001.0040.exr",
             "089_06_surf-v001....",
             ".exr",
@@ -291,7 +291,7 @@ test "check_file_belong_to_sequence" {
     );
     try std.testing.expectEqual(
         null,
-        try check_file_belong_to_sequence(
+        check_file_belong_to_sequence(
             "089_06_surf-v001.0040.exr",
             "089_06_surf-v0",
             ".exr-",
@@ -299,7 +299,7 @@ test "check_file_belong_to_sequence" {
     );
     try std.testing.expectEqual(
         null,
-        try check_file_belong_to_sequence(
+        check_file_belong_to_sequence(
             "089_06_surf-v001.0040.exr",
             "089_06_surv-v001.",
             ".exr",
@@ -307,7 +307,7 @@ test "check_file_belong_to_sequence" {
     );
     try std.testing.expectEqual(
         null,
-        try check_file_belong_to_sequence(
+        check_file_belong_to_sequence(
             "089_06_surf-v001.0040.exr",
             "089_06_surf-v001.",
             ".exd",
