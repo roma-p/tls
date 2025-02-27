@@ -2,7 +2,7 @@ const std = @import("std");
 const fs = std.fs;
 
 const sequence_split_mod = @import("sequence_split.zig");
-const filename_comp = @import("filename_comp.zig");
+const sequence_utils = @import("sequence_utils.zig");
 const string = @import("string.zig");
 const constants = @import("constants.zig");
 const dir_content = @import("dir_content.zig");
@@ -104,7 +104,7 @@ pub fn populate(self: *Self, dir: *const fs.Dir) !void {
             var finish_parsing_sequence = false;
             switch (e.kind) {
                 .file => {
-                    const seq_nb = filename_comp.check_file_belong_to_sequence(
+                    const seq_nb = sequence_utils.check_file_belong_to_sequence(
                         e.name.get_slice(),
                         self._sequence_info_buff[j].pattern_before.get_slice(),
                         self._sequence_info_buff[j].pattern_after.get_slice(),
@@ -155,7 +155,7 @@ fn _build_seq_info_if_seq(
     filename_1: []const u8,
     filename_2: []const u8,
 ) ?SequenceInfo {
-    const sequence_result_or_null = filename_comp.check_is_sequence_using_two_filenames(
+    const sequence_result_or_null = sequence_utils.check_is_sequence_using_two_filenames(
         filename_1,
         filename_2,
     );
