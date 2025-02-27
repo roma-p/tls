@@ -21,7 +21,7 @@ const StatRefined = struct {
 // TODO: term entry?
 
 pub fn posix_stat(dir: Dir, path: []const u8) !StatRefined {
-    const stat = try posix.fstatat(dir.fd, path, 0);
+    const stat = try posix.fstatat(dir.fd, path, 0); // TODO: return "unknown stat..."
     const psswd = c.getpwuid(stat.uid);
     const name_c_type: [*c]u8 = psswd.*.pw_name;
     const name_z_type = std.mem.span(@as([*:0]const u8, name_c_type));
