@@ -96,7 +96,7 @@ pub fn main() !void {
                 if (seq_or_null != null) {
                     const seq = seq_or_null.?;
                     term_str_out.append_string(" :: ");
-                    try sequence_formatter.format_sequence(
+                    sequence_formatter.format_sequence(
                         seq.pattern_before.get_slice(),
                         seq.pattern_after.get_slice(),
                         &seq.sequence_split.array,

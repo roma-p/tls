@@ -8,9 +8,9 @@ pub fn format_sequence(
     ptr_sequence_array: *const [constants.MAX_LEN_FOR_SEQUENCE_SPLIT]u16,
     split_nbr: usize,
     str_out: *string.StringLongUnicode,
-) !void {
+) void {
     str_out.append_string(pattern_before);
-    try format_sequence_number_part(ptr_sequence_array, split_nbr, str_out);
+    format_sequence_number_part(ptr_sequence_array, split_nbr, str_out);
     str_out.append_string(pattern_after);
 }
 
@@ -18,7 +18,7 @@ fn format_sequence_number_part(
     ptr_sequence_array: *const [constants.MAX_LEN_FOR_SEQUENCE_SPLIT]u16,
     split_nbr: usize,
     str_out: *string.StringLongUnicode,
-) !void {
+) void {
     if (ptr_sequence_array.*.len < 2) return;
     if (split_nbr < 1) return;
 
@@ -51,7 +51,7 @@ fn format_sequence_number_part(
 
         // collecting
         if (i > split_nbr - 1 or val_0 > buffer_last_file + 2) {
-            try collect(
+            collect(
                 str_out,
                 buffer_first_file,
                 buffer_last_file,
@@ -64,7 +64,7 @@ fn format_sequence_number_part(
             buffer_last_file = val_0 + val_1;
         }
     }
-    try collect(
+    collect(
         str_out,
         buffer_first_file,
         buffer_last_file,
@@ -81,7 +81,7 @@ fn collect(
     last_file: u16,
     buffer_isolated_files: *[constants.MAX_DISPLAYED_ISOLATED_FILE]u16,
     buffer_isolated_files_i: usize,
-) !void {
+) void {
     if (first_file == last_file) {
         str_out.append_number(u16, first_file, null, null);
     } else {
@@ -107,7 +107,7 @@ test "format_sequence_number_part" {
     var terminal_string_output = string.StringLongUnicode.init();
 
     var arr_2 = [_]u16{ 3, 2, 10, 4 } ++ [_]u16{0} ** (constants.MAX_LEN_FOR_SEQUENCE_SPLIT - 4);
-    try format_sequence_number_part(&arr_2, 2, &terminal_string_output);
+    format_sequence_number_part(&arr_2, 2, &terminal_string_output);
     try std.testing.expectEqualSlices(
         u8,
         "[3:5 10:14]",
@@ -116,7 +116,7 @@ test "format_sequence_number_part" {
     terminal_string_output.reset();
 
     var arr_3 = [_]u16{ 3, 2 } ++ [_]u16{0} ** (constants.MAX_LEN_FOR_SEQUENCE_SPLIT - 2);
-    try format_sequence_number_part(&arr_3, 2, &terminal_string_output);
+    format_sequence_number_part(&arr_3, 2, &terminal_string_output);
     try std.testing.expectEqualSlices(
         u8,
         "[3:5]",
@@ -125,7 +125,7 @@ test "format_sequence_number_part" {
     terminal_string_output.reset();
 
     var arr_4 = [_]u16{ 3, 2, 10, 4, 43, 0, 50, 2 } ++ [_]u16{0} ** (constants.MAX_LEN_FOR_SEQUENCE_SPLIT - 8);
-    try format_sequence_number_part(&arr_4, 4, &terminal_string_output);
+    format_sequence_number_part(&arr_4, 4, &terminal_string_output);
     try std.testing.expectEqualSlices(
         u8,
         "[3:5 10:14 43 50:52]",
@@ -134,7 +134,7 @@ test "format_sequence_number_part" {
     terminal_string_output.reset();
 
     var arr_5 = [_]u16{ 3, 2, 7, 0 } ++ [_]u16{0} ** (constants.MAX_LEN_FOR_SEQUENCE_SPLIT - 4);
-    try format_sequence_number_part(&arr_5, 2, &terminal_string_output);
+    format_sequence_number_part(&arr_5, 2, &terminal_string_output);
     try std.testing.expectEqualSlices(
         u8,
         "[3:7?6]",
@@ -143,7 +143,7 @@ test "format_sequence_number_part" {
     terminal_string_output.reset();
 
     var arr_6 = [_]u16{ 3, 2, 7, 0, 9, 2, 13, 2, 20, 0, 25, 0, 30, 2 } ++ [_]u16{0} ** (constants.MAX_LEN_FOR_SEQUENCE_SPLIT - 14);
-    try format_sequence_number_part(&arr_6, 7, &terminal_string_output);
+    format_sequence_number_part(&arr_6, 7, &terminal_string_output);
     try std.testing.expectEqualSlices(
         u8,
         "[3:15?6,8,12 20 25 30:32]",
@@ -152,7 +152,7 @@ test "format_sequence_number_part" {
     terminal_string_output.reset();
 
     var arr_7 = [_]u16{ 3, 2, 7, 0, 9, 1, 12, 3, 17, 2 } ++ [_]u16{0} ** (constants.MAX_LEN_FOR_SEQUENCE_SPLIT - 10);
-    try format_sequence_number_part(&arr_7, 5, &terminal_string_output);
+    format_sequence_number_part(&arr_7, 5, &terminal_string_output);
     try std.testing.expectEqualSlices(
         u8,
         "[3:19??]",
@@ -166,7 +166,7 @@ test "format_sequence" {
     var arr_2 = [_]u16{ 3, 2, 10, 4 } ++ [_]u16{0} ** (constants.MAX_LEN_FOR_SEQUENCE_SPLIT - 4);
     const pattern_before = "089_06_surf-v001.";
     const pattern_after = ".exr";
-    try format_sequence(pattern_before, pattern_after, &arr_2, 2, &terminal_string_output);
+    format_sequence(pattern_before, pattern_after, &arr_2, 2, &terminal_string_output);
     try std.testing.expectEqualSlices(
         u8,
         "089_06_surf-v001.[3:5 10:14].exr",
