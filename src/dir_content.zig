@@ -54,7 +54,7 @@ pub const DirContent = struct {
             self.dir_entry_sorted[i].name.append_string(entry.name);
             i += 1;
         }
-        std.mem.sort(DirEntry, &self.dir_entry_sorted, {}, less_than);
+        std.mem.sort(DirEntry, &self.dir_entry_sorted, {}, _less_than);
         self.dir_entry_len = i;
 
         walker = undefined;
@@ -73,7 +73,7 @@ pub const DirContent = struct {
     }
 };
 
-fn less_than(_: void, lhs: DirContent.DirEntry, rhs: DirContent.DirEntry) bool {
+fn _less_than(_: void, lhs: DirContent.DirEntry, rhs: DirContent.DirEntry) bool {
     const lhs_slice = lhs.name.get_slice();
     const rhs_slice = rhs.name.get_slice();
     if (std.mem.eql(u8, lhs_slice, "")) {
