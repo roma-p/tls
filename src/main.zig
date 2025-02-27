@@ -77,9 +77,9 @@ pub fn main() !void {
         term_str_out.append_string(date_formatter.conv_mont_id_to_trigram(date_info.@"2"));
         term_str_out.append_char(' ');
         if (date_info.@"0" == 0) {
-            try term_str_out.append_number(u8, date_info.@"4".?, 2, "2");
+            try term_str_out.append_number(u8, date_info.@"4".?, 2, 2);
             term_str_out.append_char(':');
-            try term_str_out.append_number(u8, date_info.@"5".?, 2, "2");
+            try term_str_out.append_number(u8, date_info.@"5".?, 2, 2);
         } else {
             try term_str_out.append_number(u16, date_info.@"3".?, 4, null);
         }
