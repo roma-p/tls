@@ -4,6 +4,7 @@ const constants = @import("constants.zig");
 // not yet unicode...
 pub const StringLongUnicode = String(constants.MAX_STR_LEN_ENTRY, u8);
 pub const StringShortUnicode = String(constants.MAX_STR_LEN_OWNER, u8);
+pub const StringShortAscii = String(constants.MAX_STR_LEN_OWNER, u8);
 
 pub fn String(comptime max_len: usize, comptime string_type: type) type {
     return struct {

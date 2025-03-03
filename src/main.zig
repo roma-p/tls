@@ -16,6 +16,7 @@ const format_permission = @import("format_permission.zig");
 const format_date = @import("format_date.zig");
 const _dir_content = @import("dir_content.zig");
 const DirContent = _dir_content.DirContent;
+const tls_line = @import("tls_line.zig");
 
 const def_entry = DirEntry{ .name = "", .kind = .file };
 
@@ -40,7 +41,7 @@ pub fn main() !void {
         const size_format = format_size.format_size(stat_refined.size);
 
         term_str_out.append_string(format_permission.FilePermissions.format(stat_refined.mode)[0..10]);
-        if (try file_stat.hasAnyExtendedAttributes(name_slice)) {
+        if (stat_refined.has_xattr) {
             term_str_out.append_char('@');
         } else {
             term_str_out.append_char(' ');
@@ -111,6 +112,68 @@ pub fn main() !void {
         _ = try writer.write(
             term_str_out.get_slice(),
         );
+        term_str_out.reset();
+    }
+}
+
+pub fn main_2() !void {
+    var tls_line_instance = tls_line.init();
+    defer tls_line_instance.deinit();
+
+    var dir_content = DirContent.init();
+    defer dir_content.deinit();
+
+    const dir = try fs.cwd().openDir(".", .{ .access_sub_paths = false, .iterate = true });
+
+    var writer = std.io.getStdOut().writer();
+
+    var term_str_out = StringLongUnicode.init();
+    defer term_str_out.deinit();
+
+    var seq_parser = sequence_parser.init();
+    defer seq_parser.deinit();
+
+    try dir_content.populate(&dir);
+    const dir_content_slice = dir_content.get_slice();
+
+    for (dir_content_slice) |entry| {
+        const name_slice = entry.name.get_slice();
+        if (std.mem.eql(u8, name_slice, "")) continue;
+
+        const stat_refined = try file_stat.posix_stat(dir, name_slice);
+        tls_line_instance.size.init_from_size(stat_refined.size);
+        tls_line_instance.permission = format_permission.FilePermissions.format(stat_refined.mode);
+        tls_line_instance.has_xattr = stat_refined.has_xattr;
+        tls_line_instance.owner.append_string(stat_refined.owner[0..stat_refined.owner_len]);
+        tls_line_instance.date.init_from_epoch(stat_refined.mtime);
+        tls_line_instance.filename.append_string(name_slice);
+
+        switch (entry.kind) {
+            .file => {},
+            .directory => {
+                const d = try dir.openDir(name_slice, .{ .no_follow = false, .iterate = true });
+                try seq_parser.populate(&d);
+                const seq_or_null = seq_parser.get_longer_sequence();
+                if (seq_or_null != null) {
+                    const seq = seq_or_null.?;
+                    term_str_out.append_string(" :: ");
+                    format_sequence.format_sequence(
+                        seq.pattern_before.get_slice(),
+                        seq.pattern_after.get_slice(),
+                        &seq.sequence_split.array,
+                        seq.sequence_split.split_end,
+                        &tls_line_instance.extra,
+                    );
+                    seq_parser.reset();
+                }
+            },
+            else => {},
+        }
+        term_str_out.append_string("\n");
+        _ = try writer.write(
+            term_str_out.get_slice(),
+        );
+        tls_line_instance.reset();
         term_str_out.reset();
     }
 }

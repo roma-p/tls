@@ -4,6 +4,7 @@ const os = std.os;
 const posix = std.posix;
 const PosixStat = std.posix.Stat;
 const Dir = std.fs.Dir;
+const string = @import("string.zig");
 
 const c = @cImport({
     @cInclude("sys/xattr.h");
@@ -11,11 +12,12 @@ const c = @cImport({
 });
 
 const StatRefined = struct {
-    owner: [constants.MAX_STR_LEN_OWNER]u8,
+    owner: [constants.MAX_STR_LEN_OWNER]u8, // TODO: use strings...
     owner_len: usize,
     mode: u32,
     size: u64,
     mtime: u64,
+    has_xattr: bool,
 };
 
 // TODO: term entry?
@@ -33,6 +35,7 @@ pub fn posix_stat(dir: Dir, path: []const u8) !StatRefined {
         .mode = stat.mode,
         .size = @bitCast(stat.size),
         .mtime = @intCast(@as(i128, mtime.tv_sec)),
+        .has_xattr = false,
     };
 
     var i: usize = 0;
@@ -41,10 +44,14 @@ pub fn posix_stat(dir: Dir, path: []const u8) !StatRefined {
         if (i == constants.MAX_STR_LEN_OWNER) break;
         ret.owner[i] = name_z_type[i];
     }
+
+    if (has_any_extended_attributes(path)) ret.has_xattr = true;
+
     return ret;
 }
 
-pub fn hasAnyExtendedAttributes(path: []const u8) !bool {
+// add this to StatRefined.
+pub fn has_any_extended_attributes(path: []const u8) !bool {
     const result = c.listxattr(
         path.ptr,
         null, // Don't retrieve actual attributes

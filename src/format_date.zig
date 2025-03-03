@@ -1,7 +1,7 @@
 const std = @import("std");
 const mem = std.mem;
 
-const DateTime = struct {
+pub const DateTime = struct {
     year: u16,
     month: u8,
     day: u8,
