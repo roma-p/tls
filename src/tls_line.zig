@@ -3,6 +3,9 @@ const Writer = std.fs.File.Writer;
 const string = @import("string.zig");
 const format_date = @import("format_date.zig");
 const zig_utils = @import("zig_utils.zig");
+const term_writer = @import("term_writer.zig");
+
+const TermWriter = term_writer.TermWriter;
 
 permissions: Permissions,
 has_xattr: bool,
@@ -13,6 +16,7 @@ filename: string.StringLongUnicode,
 extra: string.StringLongUnicode,
 
 _string_buffer: string.StringShortAscii,
+_term_writer: TermWriter,
 
 // TODO tagunion for extra: either symlink either sequence
 // TODO kind? used as type for typenum?
@@ -103,12 +107,13 @@ const Date = struct {
         self.year_or_hour = tmp.year_or_hour;
     }
 
-    pub fn display(self: *Date, writer: *Writer) !void {
-        _ = try writer.write(&self.month);
-        _ = try writer.write(" ");
-        _ = try writer.write(self.day.get_slice());
-        _ = try writer.write(" ");
-        _ = try writer.write(&self.year_or_hour);
+    pub fn display(self: *Date, writer: *TermWriter) !void {
+        const c = TermWriter.Color.Cyan;
+        try writer.write(&self.month, c);
+        try writer.write(" ", null);
+        try writer.write(self.day.get_slice(), c);
+        try writer.write(" ", null);
+        try writer.write(&self.year_or_hour, c);
     }
 
     fn _is_date_older_by_a_year(now: format_date.DateTime, date: format_date.DateTime) bool {
@@ -208,7 +213,7 @@ const Size = struct {
         self.size_char = tmp.size_char;
     }
 
-    pub fn display(self: *Size, writer: *Writer) !void {
+    pub fn display(self: *Size, writer: *TermWriter) !void {
         const is_size_to_print = true;
         if (is_size_to_print) {
             if (self.size_indicator == 0) {
@@ -222,7 +227,7 @@ const Size = struct {
         } else {
             self.buffer_string.append_string("     -");
         }
-        _ = try writer.write(self.buffer_string.get_slice());
+        try writer.write(self.buffer_string.get_slice(), TermWriter.Color.Green);
     }
 };
 
@@ -273,10 +278,17 @@ const Permissions = struct{
         self.permissions[9] = if (mode & 0o001 != 0) 'x' else '-';
     }
 
-    pub fn display(self: *Permissions, writer: *Writer) !void {
+    pub fn display(self: *Permissions, writer: *TermWriter) !void {
         for (self.permissions) |c| {
             const r : []const u8 = &[1]u8{ c };
-            _ = try writer.write(r); 
+            const color: TermWriter.Color = switch (c) {
+                'r' => .Yellow,
+                'w' => .Red,
+                'x' => .Green,
+                'd' => .Blue,
+                else => .White
+            };
+            _ = try writer.write(r, color); 
         }
     }
 };
@@ -293,6 +305,7 @@ pub fn init() Self {
         .filename = string.StringLongUnicode.init(),
         .extra = string.StringLongUnicode.init(),
         ._string_buffer = string.StringShortAscii.init(),
+        ._term_writer = TermWriter.init(),
     };
 }
 
@@ -321,19 +334,21 @@ pub fn deinit(self: *Self) void {
     self.filename = undefined;
     self._string_buffer.deinit();
     self._string_buffer = undefined;
+    self._term_writer.deinit();
+    self._term_writer = undefined;
     self.extra.deinit();
     self.extra = undefined;
 }
 
-pub fn display_owner(self: *Self, writer: *Writer) !void {
-    _ = try writer.write(self.owner.get_slice());
+pub fn display_owner(self: *Self) !void {
+    try self._term_writer.write(self.owner.get_slice(), TermWriter.Color.Yellow);
 }
 
-pub fn display_xtattr(self: *Self, writer: *Writer) !void {
+pub fn display_xtattr(self: *Self) !void {
     if (self.has_xattr) {
-    _ = try writer.write("@");
+    _ = try self._term_writer.write("@", TermWriter.Color.Green);
     } else {
-    _ = try writer.write(" ");
+    _ = try self._term_writer.write(" ", null);
     }
 }
 
@@ -342,14 +357,15 @@ pub fn display_entry_name(self: *Self, writer: *Writer) !void {
 }
 
 pub fn display(self: *Self, writer: *Writer) !void {
-    try self.permissions.display(writer);
-    try self.display_xtattr(writer);
+    const term_writer_ref = &self._term_writer;
+    try self.permissions.display(term_writer_ref);
+    try self.display_xtattr();
     _ = try writer.write(" ");
-    try self.display_owner(writer);
+    try self.display_owner();
     _ = try writer.write(" ");
-    try self.size.display(writer);
+    try self.size.display(term_writer_ref);
     _ = try writer.write(" ");
-    try self.date.display(writer);
+    try self.date.display(term_writer_ref);
     _ = try writer.write(" ");
     try self.display_entry_name(writer);
     _ = try writer.write("\n");
