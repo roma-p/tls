@@ -146,7 +146,8 @@ pub fn main() !void {
         tls_line_instance.has_xattr = stat_refined.has_xattr;
         tls_line_instance.owner.set_string(stat_refined.owner[0..stat_refined.owner_len]);
         tls_line_instance.date.set_from_epoch(stat_refined.mtime);
-        tls_line_instance.filename.set_string(name_slice);
+        tls_line_instance.entry_name.set_string(name_slice);
+        tls_line_instance.entry_kind = entry.kind;
 
         switch (entry.kind) {
             .file => {},

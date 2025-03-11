@@ -1,5 +1,7 @@
 const std = @import("std");
-const Writer = std.fs.File.Writer;
+const fs = std.fs;
+const Writer = fs.File.Writer;
+const FileKind = fs.File.Kind;
 const string = @import("string.zig");
 const format_date = @import("format_date.zig");
 const zig_utils = @import("zig_utils.zig");
@@ -12,7 +14,8 @@ has_xattr: bool,
 size: Size,
 owner: string.StringShortUnicode,
 date: Date,
-filename: string.StringLongUnicode,
+entry_name: string.StringLongUnicode,
+entry_kind: FileKind,
 extra: string.StringLongUnicode,
 
 _string_buffer: string.StringShortAscii,
@@ -108,7 +111,7 @@ const Date = struct {
     }
 
     pub fn display(self: *Date, writer: *TermWriter) !void {
-        const c = TermWriter.Color.Cyan;
+        const c = TermWriter.Color.Blue;
         try writer.write(&self.month, c);
         try writer.write(" ", null);
         try writer.write(self.day.get_slice(), c);
@@ -302,7 +305,8 @@ pub fn init() Self {
         .size = Size.init(),
         .owner = string.StringShortUnicode.init(),
         .date = Date.init(),
-        .filename = string.StringLongUnicode.init(),
+        .entry_name = string.StringLongUnicode.init(),
+        .entry_kind = undefined,
         .extra = string.StringLongUnicode.init(),
         ._string_buffer = string.StringShortAscii.init(),
         ._term_writer = TermWriter.init(),
@@ -315,7 +319,8 @@ pub fn reset(self: *Self) void {
     self.size.reset();
     self.owner.reset();
     self.date.reset();
-    self.filename.reset();
+    self.entry_name.reset();
+    self.entry_name = undefined;
     self._string_buffer.reset();
     self.extra.reset();
 }
@@ -330,8 +335,9 @@ pub fn deinit(self: *Self) void {
     self.owner = undefined;
     self.date.deinit();
     self.date = undefined;
-    self.filename.deinit();
-    self.filename = undefined;
+    self.entry_name.deinit();
+    self.entry_name = undefined;
+    self.entry_name = undefined;
     self._string_buffer.deinit();
     self._string_buffer = undefined;
     self._term_writer.deinit();
@@ -352,8 +358,12 @@ pub fn display_xtattr(self: *Self) !void {
     }
 }
 
-pub fn display_entry_name(self: *Self, writer: *Writer) !void {
-    _ = try writer.write(self.filename.get_slice());
+pub fn display_entry_name(self: *Self, writer: *TermWriter) !void {
+    const c: TermWriter.Color = switch(self.entry_kind) {
+        .directory => .Blue,
+        else => .White
+    };
+    try writer.write(self.entry_name.get_slice(), c);
 }
 
 pub fn display(self: *Self, writer: *Writer) !void {
@@ -367,7 +377,7 @@ pub fn display(self: *Self, writer: *Writer) !void {
     _ = try writer.write(" ");
     try self.date.display(term_writer_ref);
     _ = try writer.write(" ");
-    try self.display_entry_name(writer);
+    try self.display_entry_name(term_writer_ref);
     _ = try writer.write("\n");
     
 }
