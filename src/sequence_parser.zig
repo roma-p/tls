@@ -8,10 +8,9 @@ const constants = @import("constants.zig");
 const _dir_content = @import("dir_content.zig");
 const DirContent = _dir_content.DirContent;
 
+// TODO : 2 struct: 'builder'  + info for real...
 _sequence_info_buff: [100]SequenceInfo,
 _sequence_info_buff_len: usize,
-
-// missing here: multiple sequences. flag to capture or not rights.
 
 const SequenceInfo = struct {
     sequence_split: sequence_split_mod.SequenceSplit,

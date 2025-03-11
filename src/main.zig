@@ -45,7 +45,7 @@ pub fn main() !void {
 
     var seq_parser_curr_dir = sequence_parser.init();
     defer seq_parser_curr_dir.deinit();
-    // seq_parser_curr_dir.populate(dir); // TODO: seq_parser: remove DirContent: created from outside.
+    try seq_parser_curr_dir.populate(&dir_content_curr); // TODO: seq_parser: remove DirContent: created from outside.
 
     try dir_content_curr.populate(&dir);
     const dir_content_slice = dir_content_curr.get_slice();
