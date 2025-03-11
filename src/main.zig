@@ -20,7 +20,7 @@ const tls_line = @import("tls_line.zig");
 
 const def_entry = DirEntry{ .name = "", .kind = .file };
 
-pub fn main() !void {
+pub fn _main() !void {
     var dir_content = DirContent.init();
 
     const dir = try fs.cwd().openDir(".", .{ .access_sub_paths = false, .iterate = true });
@@ -116,7 +116,7 @@ pub fn main() !void {
     }
 }
 
-pub fn main_2() !void {
+pub fn main() !void {
     var tls_line_instance = tls_line.init();
     defer tls_line_instance.deinit();
 
@@ -141,12 +141,12 @@ pub fn main_2() !void {
         if (std.mem.eql(u8, name_slice, "")) continue;
 
         const stat_refined = try file_stat.posix_stat(dir, name_slice);
-        tls_line_instance.size.init_from_size(stat_refined.size);
-        tls_line_instance.permission = format_permission.FilePermissions.format(stat_refined.mode);
+        tls_line_instance.size.set_from_size(stat_refined.size);
+        tls_line_instance.permissions.set_from_mode(stat_refined.mode);
         tls_line_instance.has_xattr = stat_refined.has_xattr;
-        tls_line_instance.owner.append_string(stat_refined.owner[0..stat_refined.owner_len]);
-        tls_line_instance.date.init_from_epoch(stat_refined.mtime);
-        tls_line_instance.filename.append_string(name_slice);
+        tls_line_instance.owner.set_string(stat_refined.owner[0..stat_refined.owner_len]);
+        tls_line_instance.date.set_from_epoch(stat_refined.mtime);
+        tls_line_instance.filename.set_string(name_slice);
 
         switch (entry.kind) {
             .file => {},
@@ -170,9 +170,10 @@ pub fn main_2() !void {
             else => {},
         }
         term_str_out.append_string("\n");
-        _ = try writer.write(
-            term_str_out.get_slice(),
-        );
+        // _ = try writer.write(
+        //     term_str_out.get_slice(),
+        // );
+        try tls_line_instance.display(&writer);
         tls_line_instance.reset();
         term_str_out.reset();
     }

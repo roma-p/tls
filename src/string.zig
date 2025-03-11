@@ -94,7 +94,12 @@ pub fn String(comptime max_len: usize, comptime string_type: type) type {
             self._append_number_buffer = undefined;
         }
 
-        pub fn print_debug(self: *Self) void {
+        pub fn set_string(self: *Self, str: []const string_type) void {
+            self.reset();
+            self.append_string(str);
+        }
+
+        pub fn print_debug(self: *const Self) void {
             std.debug.print("{s}\n", .{self._array[0..self._str_len]});
         }
 
@@ -104,6 +109,18 @@ pub fn String(comptime max_len: usize, comptime string_type: type) type {
 
         pub fn get_slice(self: *const Self) []const string_type {
             return self._array[0..self._str_len];
+        }
+
+        pub fn copy_to_arr(self: *Self, dst: []string_type, dst_shift: ?usize) void {
+
+            const i_dst_shift: usize = if(dst_shift != null) dst_shift.? else 0;
+
+            const i_end = @min(self._str_len, dst.len - i_dst_shift);
+            var i: usize = 0;
+
+            while (i < i_end): (i+=1) {
+                dst[i + i_dst_shift] = self._array[i];
+            }
         }
 
         inline fn _conv_zero_padd_to_str(comptime zero_padding: usize) *const [1:0]u8 {

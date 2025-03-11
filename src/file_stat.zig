@@ -45,7 +45,7 @@ pub fn posix_stat(dir: Dir, path: []const u8) !StatRefined {
         ret.owner[i] = name_z_type[i];
     }
 
-    if (has_any_extended_attributes(path)) ret.has_xattr = true;
+    if (try has_any_extended_attributes(path)) ret.has_xattr = true;
 
     return ret;
 }
@@ -56,7 +56,7 @@ pub fn has_any_extended_attributes(path: []const u8) !bool {
         path.ptr,
         null, // Don't retrieve actual attributes
         0, // Get required buffer size
-        0, // options flags.
+        // 0, // options flags.
     );
 
     if (result > 0) {

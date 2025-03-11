@@ -1,9 +1,11 @@
 const std = @import("std");
+const Writer = std.fs.File.Writer;
 const string = @import("string.zig");
 const format_date = @import("format_date.zig");
+const zig_utils = @import("zig_utils.zig");
 
-permission: [10]u8,
-has_xattr: u1,
+permissions: Permissions,
+has_xattr: bool,
 size: Size,
 owner: string.StringShortUnicode,
 date: Date,
@@ -16,32 +18,43 @@ _string_buffer: string.StringShortAscii,
 // TODO kind? used as type for typenum?
 
 const Date = struct {
+
+    const DayString = string.String(2, u8);
+        
     less_than_a_year_ago: u1,
-    day: [2]u8,
+    day: DayString,
     month: [3]u8,
     year_or_hour: [5]u8,
+    _now: format_date.DateTime,
+    _string_buffer: string.StringShortAscii,
 
     pub fn init() Date {
         return Date{
             .less_than_a_year_ago = 0,
-            .day = [_]u8{ ' ', ' ' },
+            .day = DayString.init(),
             .month = [_]u8{ ' ', ' ', ' ' },
             .year_or_hour = [_]u8{ ' ', ' ', ' ', ' ', ' ' },
+            ._now = format_date.generate_datetime_from_epoch(@intCast(std.time.timestamp())),
+            ._string_buffer = string.StringShortAscii.init(),
         };
     }
 
     pub fn reset(self: *Date) void {
         self.less_than_a_year_ago = 0;
-        self.day = [_]u8{ ' ', ' ' };
+        self.day.reset();
         self.month = [_]u8{ ' ', ' ', ' ' };
         self.year_or_hour = [_]u8{ ' ', ' ', ' ', ' ', ' ' };
     }
 
     pub fn deinit(self: *Date) void {
         self.less_than_a_year_ago = undefined;
+        self.day.deinit();
         self.day = undefined;
         self.month = undefined;
         self.year_or_hour = undefined;
+        self._now = undefined;
+        self._string_buffer.deinit();
+        self._string_buffer = undefined;
     }
 
     pub fn init_from_epoch(
@@ -54,33 +67,26 @@ const Date = struct {
         var ret = Date.init();
 
         string_buffer.reset();
-        string_buffer.append_number(date.day);
+        string_buffer.append_number(u8, date.day, 2, null);
         const day_slice = string_buffer.get_slice();
-        ret.day[0] = day_slice[0];
-        ret.day[1] = day_slice[1];
+        // TODO: copy helper... whith len...
 
-        ret.month = format_date.conv_mont_id_to_trigram(date.month);
+        ret.day.set_string(day_slice);
+
+        const month_tmp = format_date.conv_mont_id_to_trigram(date.month);
+        zig_utils.copy_arr(u8, month_tmp, &ret.month, 3);
 
         string_buffer.reset();
         if (is_older_by_a_year) {
-            string_buffer.append_number(date.year);
-            const year_slice = string_buffer.get_slice();
-            ret.year_or_hour[0] = year_slice[0];
-            ret.year_or_hour[1] = year_slice[1];
-            ret.year_or_hour[2] = year_slice[2];
-            ret.year_or_hour[3] = year_slice[3];
-            ret.year_or_hour[4] = year_slice[4];
+            string_buffer.append_number(u16, date.year, null, null);
+            string_buffer.copy_to_arr(&ret.year_or_hour, null);
         } else {
-            string_buffer.append_number(date.hour);
-            const hour_slice = string_buffer.get_slice();
-            ret.year_or_hour[0] = hour_slice[0];
-            ret.year_or_hour[1] = hour_slice[1];
+            string_buffer.append_number(u8, date.hour, null, 2);
+            string_buffer.copy_to_arr(&ret.year_or_hour, null);
             ret.year_or_hour[2] = ':';
             string_buffer.reset();
-            string_buffer.append_number(date.minute);
-            const minute_slice = string_buffer.get_slice();
-            ret.year_or_hour[3] = minute_slice[0];
-            ret.year_or_hour[4] = minute_slice[1];
+            string_buffer.append_number(u8, date.minute, null, 2);
+            string_buffer.copy_to_arr(&ret.year_or_hour, 3);
             string_buffer.reset();
         }
         return ret;
@@ -89,17 +95,23 @@ const Date = struct {
     pub fn set_from_epoch(
         self: *Date,
         epoch: u64,
-        now: format_date.DateTime,
-        string_buffer: *string.StringShortAscii,
     ) void {
-        const tmp = Date.init_from_epoch(epoch, now, string_buffer);
+        const tmp = Date.init_from_epoch(epoch, self._now, &self._string_buffer);
         self.less_than_a_year_ago = tmp.less_than_a_year_ago;
         self.day = tmp.day;
         self.month = tmp.month;
         self.year_or_hour = tmp.year_or_hour;
     }
 
-    fn _is_date_older_by_a_year(now: format_date.DateTime, date: format_date.DateTime) u1 {
+    pub fn display(self: *Date, writer: *Writer) !void {
+        _ = try writer.write(&self.month);
+        _ = try writer.write(" ");
+        _ = try writer.write(self.day.get_slice());
+        _ = try writer.write(" ");
+        _ = try writer.write(&self.year_or_hour);
+    }
+
+    fn _is_date_older_by_a_year(now: format_date.DateTime, date: format_date.DateTime) bool {
         if (date.year == now.year) {
             return false;
         } else if (date.year + 1 < now.year) {
@@ -113,16 +125,20 @@ const Date = struct {
 };
 
 const Size = struct {
+    const SizeBufferString = string.String(6, u8);
+
     size_indicator: u2,
     // 0: under a ko, no letter, 1: between ko an 999 To, 2: beyound
     size: f32,
     size_char: u8,
+    buffer_string: SizeBufferString,
 
     pub fn init() Size {
         return Size{
             .size_indicator = 0,
             .size = 0,
             .size_char = 0,
+            .buffer_string = SizeBufferString.init(),
         };
     }
 
@@ -130,12 +146,15 @@ const Size = struct {
         self.size_indicator = 0;
         self.size = 0;
         self.size_char = 0;
+        self.buffer_string.reset();
     }
 
     pub fn deinit(self: *Size) void {
         self.size_indicator = undefined;
         self.size = undefined;
         self.size_char = undefined;
+        self.buffer_string.deinit();
+        self.buffer_string = undefined;
     }
 
     pub fn init_from_size(number: u64) Size {
@@ -178,6 +197,7 @@ const Size = struct {
             .size_indicator = size_range,
             .size = ret,
             .size_char = c,
+            .buffer_string = undefined,
         };
     }
 
@@ -187,14 +207,86 @@ const Size = struct {
         self.size = tmp.size;
         self.size_char = tmp.size_char;
     }
+
+    pub fn display(self: *Size, writer: *Writer) !void {
+        const is_size_to_print = true;
+        if (is_size_to_print) {
+            if (self.size_indicator == 0) {
+                self.buffer_string.append_number(f32, self.size, 6, null);
+            } else if (self.size_indicator == 1) {
+                self.buffer_string.append_number(f32, self.size, 5, null);
+                self.buffer_string.append_char(self.size_char);
+            } else {
+                self.buffer_string.append_string("  huge");
+            }
+        } else {
+            self.buffer_string.append_string("     -");
+        }
+        _ = try writer.write(self.buffer_string.get_slice());
+    }
+};
+
+const Permissions = struct{
+    permissions: [10]u8,
+
+    pub fn init() Permissions {
+        return Permissions{
+            .permissions = [_]u8{' '} ** 10,
+        };
+    }
+
+    pub fn reset(self: *Permissions) void {
+        self.permissions = [_]u8{' '} ** 10;
+    }
+
+    pub fn deinit(self: *Permissions) void {
+        self.permissions = undefined;
+    }
+
+    pub fn set_from_mode(self: *Permissions, mode: u32) void {
+        // File type
+        self.permissions[0] = switch (mode & 0o170000) {
+            0o170000 => 'b', // Block device
+            0o140000 => 'l', // Symbolic link
+            0o120000 => 'n', // Socket
+            0o110000 => 'p', // FIFO
+            0o100000 => '-', // Directory
+            0o060000 => 'b', // Block device
+            0o040000 => 'd', // Regular file
+            0o030000 => 'c', // Character device
+            else => '-',
+        };
+
+        // Owner permissions
+        self.permissions[1] = if (mode & 0o400 != 0) 'r' else '-';
+        self.permissions[2] = if (mode & 0o200 != 0) 'w' else '-';
+        self.permissions[3] = if (mode & 0o100 != 0) 'x' else '-';
+
+        // Group permissions
+        self.permissions[4] = if (mode & 0o040 != 0) 'r' else '-';
+        self.permissions[5] = if (mode & 0o020 != 0) 'w' else '-';
+        self.permissions[6] = if (mode & 0o010 != 0) 'x' else '-';
+
+        // Others permissions
+        self.permissions[7] = if (mode & 0o004 != 0) 'r' else '-';
+        self.permissions[8] = if (mode & 0o002 != 0) 'w' else '-';
+        self.permissions[9] = if (mode & 0o001 != 0) 'x' else '-';
+    }
+
+    pub fn display(self: *Permissions, writer: *Writer) !void {
+        for (self.permissions) |c| {
+            const r : []const u8 = &[1]u8{ c };
+            _ = try writer.write(r); 
+        }
+    }
 };
 
 const Self = @This();
 
 pub fn init() Self {
     return Self{
-        .permission = [_]u8{' '} ** 10,
-        .has_xattr = bool,
+        .permissions = Permissions.init(),
+        .has_xattr = false,
         .size = Size.init(),
         .owner = string.StringShortUnicode.init(),
         .date = Date.init(),
@@ -205,8 +297,8 @@ pub fn init() Self {
 }
 
 pub fn reset(self: *Self) void {
-    self.permission = [_]u8{' '} ** 10;
-    self.has_xattr = bool;
+    self.permissions.reset();
+    self.has_xattr = false;
     self.size.reset();
     self.owner.reset();
     self.date.reset();
@@ -216,7 +308,8 @@ pub fn reset(self: *Self) void {
 }
 
 pub fn deinit(self: *Self) void {
-    self.permission = undefined;
+    self.permissions.deinit();
+    self.permissions = undefined;
     self.has_xattr = undefined;
     self.size.deinit();
     self.size = undefined;
@@ -230,4 +323,35 @@ pub fn deinit(self: *Self) void {
     self._string_buffer = undefined;
     self.extra.deinit();
     self.extra = undefined;
+}
+
+pub fn display_owner(self: *Self, writer: *Writer) !void {
+    _ = try writer.write(self.owner.get_slice());
+}
+
+pub fn display_xtattr(self: *Self, writer: *Writer) !void {
+    if (self.has_xattr) {
+    _ = try writer.write("@");
+    } else {
+    _ = try writer.write(" ");
+    }
+}
+
+pub fn display_entry_name(self: *Self, writer: *Writer) !void {
+    _ = try writer.write(self.filename.get_slice());
+}
+
+pub fn display(self: *Self, writer: *Writer) !void {
+    try self.permissions.display(writer);
+    try self.display_xtattr(writer);
+    _ = try writer.write(" ");
+    try self.display_owner(writer);
+    _ = try writer.write(" ");
+    try self.size.display(writer);
+    _ = try writer.write(" ");
+    try self.date.display(writer);
+    _ = try writer.write(" ");
+    try self.display_entry_name(writer);
+    _ = try writer.write("\n");
+    
 }
