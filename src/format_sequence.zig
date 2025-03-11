@@ -90,9 +90,9 @@ fn collect(
         str_out.append_number(u16, last_file, null, null);
     }
     if (buffer_isolated_files_i > buffer_isolated_files.len) {
-        str_out.append_string("??");
+        str_out.append_string("!!");
     } else {
-        str_out.append_char('?');
+        str_out.append_char('!');
         var k: usize = 0;
         while (k < buffer_isolated_files_i) : (k += 1) {
             str_out.append_number(u16, buffer_isolated_files[k], null, null);
@@ -137,7 +137,7 @@ test "format_sequence_number_part" {
     format_sequence_number_part(&arr_5, 2, &terminal_string_output);
     try std.testing.expectEqualSlices(
         u8,
-        "[3:7?6]",
+        "[3:7!6]",
         terminal_string_output.get_slice(),
     );
     terminal_string_output.reset();
@@ -146,7 +146,7 @@ test "format_sequence_number_part" {
     format_sequence_number_part(&arr_6, 7, &terminal_string_output);
     try std.testing.expectEqualSlices(
         u8,
-        "[3:15?6,8,12 20 25 30:32]",
+        "[3:15!6,8,12 20 25 30:32]",
         terminal_string_output.get_slice(),
     );
     terminal_string_output.reset();
@@ -155,7 +155,7 @@ test "format_sequence_number_part" {
     format_sequence_number_part(&arr_7, 5, &terminal_string_output);
     try std.testing.expectEqualSlices(
         u8,
-        "[3:19??]",
+        "[3:19!!]",
         terminal_string_output.get_slice(),
     );
     terminal_string_output.reset();
