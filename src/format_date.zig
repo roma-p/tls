@@ -9,39 +9,6 @@ pub const DateTime = struct {
     minute: u8,
 };
 
-pub fn get_date_info(epoch: u64) struct { u1, u8, u8, ?u16, ?u8, ?u8 } {
-    const curr: u64 = @intCast(std.time.timestamp());
-    const curr_date_time = generate_datetime_from_epoch(curr);
-    const dst_date_time = generate_datetime_from_epoch(epoch);
-
-    var is_older_by_a_year: bool = undefined;
-    if (dst_date_time.year == curr_date_time.year) {
-        is_older_by_a_year = false;
-    } else if (dst_date_time.year + 1 < curr_date_time.year) {
-        is_older_by_a_year = true;
-    } else if (dst_date_time.month < curr_date_time.month) {
-        is_older_by_a_year = false;
-    } else {
-        is_older_by_a_year = true;
-    }
-
-    if (is_older_by_a_year) return .{
-        1,
-        dst_date_time.day,
-        dst_date_time.month,
-        dst_date_time.year,
-        null,
-        null,
-    } else return .{
-        0,
-        dst_date_time.day,
-        dst_date_time.month,
-        null,
-        dst_date_time.hour,
-        dst_date_time.minute,
-    };
-}
-
 pub fn conv_mont_id_to_trigram(month_id: u8) []const u8 {
     return switch (month_id) {
         1 => "Jan",
