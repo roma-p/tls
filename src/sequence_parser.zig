@@ -5,10 +5,9 @@ const sequence_split_mod = @import("sequence_split.zig");
 const sequence_utils = @import("sequence_utils.zig");
 const string = @import("string.zig");
 const constants = @import("constants.zig");
-const dir_content = @import("dir_content.zig");
-const DirContent = dir_content.DirContent;
+const _dir_content = @import("dir_content.zig");
+const DirContent = _dir_content.DirContent;
 
-_dir_content: DirContent,
 _sequence_info_buff: [100]SequenceInfo,
 _sequence_info_buff_len: usize,
 
@@ -39,32 +38,25 @@ const Self = @This();
 
 pub fn init() Self {
     return Self{
-        ._dir_content = DirContent.init(),
         ._sequence_info_buff = [_]SequenceInfo{undefined} ** 100,
         ._sequence_info_buff_len = 0,
     };
 }
 
 pub fn reset(self: *Self) void {
-    self._dir_content.reset();
     self._sequence_info_buff = [_]SequenceInfo{undefined} ** 100;
     self._sequence_info_buff_len = 0;
 }
 
 pub fn deinit(self: *Self) void {
-    self._dir_content.deinit();
-    self._dir_content = undefined;
     self._sequence_info_buff = undefined;
     self._sequence_info_buff_len = undefined;
 }
 
 // TODO: 1. split into proper state machine.
 // TODO: 2. add posix support. // Defuk did i meant?
-// TODO: 3. add  idx of the first file of the dir (i) -> to know where to put it in the term.
-pub fn populate(self: *Self, dir: *const fs.Dir) !void {
-    self._dir_content.reset();
-    try self._dir_content.populate(dir);
-    const dir_content_slice = self._dir_content.get_slice();
+pub fn populate(self: *Self, dir_content: *DirContent) !void {
+    const dir_content_slice = dir_content.get_slice();
 
     if (dir_content_slice.len == 0) return;
 

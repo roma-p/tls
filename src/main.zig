@@ -32,8 +32,11 @@ pub fn main() !void {
     var tls_line_instance = tls_line.init();
     defer tls_line_instance.deinit();
 
-    var dir_content = DirContent.init();
-    defer dir_content.deinit();
+    var dir_content_curr = DirContent.init();
+    defer dir_content_curr.deinit();
+
+    var dir_content_sub = DirContent.init();
+    defer dir_content_sub.deinit();
 
     const dir = try fs.cwd().openDir(".", .{ .access_sub_paths = false, .iterate = true });
 
@@ -44,8 +47,8 @@ pub fn main() !void {
     defer seq_parser_curr_dir.deinit();
     // seq_parser_curr_dir.populate(dir); // TODO: seq_parser: remove DirContent: created from outside.
 
-    try dir_content.populate(&dir);
-    const dir_content_slice = dir_content.get_slice();
+    try dir_content_curr.populate(&dir);
+    const dir_content_slice = dir_content_curr.get_slice();
 
     for (dir_content_slice) |entry| {
         const name_slice = entry.name.get_slice();
@@ -59,7 +62,8 @@ pub fn main() !void {
             },
             .directory => {
                 const d = try dir.openDir(name_slice, .{ .no_follow = false, .iterate = true });
-                try seq_parser_sub_dir.populate(&d);
+                try dir_content_sub.populate(&d);
+                try seq_parser_sub_dir.populate(&dir_content_sub);
                 const seq_or_null = seq_parser_sub_dir.get_longer_sequence();
                 if (seq_or_null != null) {
                     const seq = seq_or_null.?;
