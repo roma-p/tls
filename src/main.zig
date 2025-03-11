@@ -17,6 +17,17 @@ const tls_line = @import("tls_line.zig");
 
 const def_entry = DirEntry{ .name = "", .kind = .file };
 
+
+fn set_tls_line(entry: *const DirContent.DirEntry, tls_line_instance: *tls_line, stat_refined: file_stat.StatRefined) void{
+    tls_line_instance.size.set_from_size(stat_refined.size);
+    tls_line_instance.permissions.set_from_mode(stat_refined.mode);
+    tls_line_instance.has_xattr = stat_refined.has_xattr;
+    tls_line_instance.owner.set_string(stat_refined.owner[0..stat_refined.owner_len]);
+    tls_line_instance.date.set_from_epoch(stat_refined.mtime);
+    tls_line_instance.entry_name.set_string(entry.name.get_slice());
+    tls_line_instance.entry_kind = entry.kind;
+}
+
 pub fn main() !void {
     var tls_line_instance = tls_line.init();
     defer tls_line_instance.deinit();
@@ -26,24 +37,21 @@ pub fn main() !void {
 
     const dir = try fs.cwd().openDir(".", .{ .access_sub_paths = false, .iterate = true });
 
-    var seq_parser = sequence_parser.init();
-    defer seq_parser.deinit();
+    var seq_parser_sub_dir = sequence_parser.init();
+    defer seq_parser_sub_dir.deinit();
+
+    var seq_parser_curr_dir = sequence_parser.init();
+    defer seq_parser_curr_dir.deinit();
+    // seq_parser_curr_dir.populate(dir); // TODO: seq_parser: remove DirContent: created from outside.
 
     try dir_content.populate(&dir);
     const dir_content_slice = dir_content.get_slice();
 
     for (dir_content_slice) |entry| {
         const name_slice = entry.name.get_slice();
-        if (std.mem.eql(u8, name_slice, "")) continue;
-
         const stat_refined = try file_stat.posix_stat(dir, name_slice);
-        tls_line_instance.size.set_from_size(stat_refined.size);
-        tls_line_instance.permissions.set_from_mode(stat_refined.mode);
-        tls_line_instance.has_xattr = stat_refined.has_xattr;
-        tls_line_instance.owner.set_string(stat_refined.owner[0..stat_refined.owner_len]);
-        tls_line_instance.date.set_from_epoch(stat_refined.mtime);
-        tls_line_instance.entry_name.set_string(name_slice);
-        tls_line_instance.entry_kind = entry.kind;
+
+        set_tls_line(&entry, &tls_line_instance, stat_refined);
 
         switch (entry.kind) {
             .file => {
@@ -51,8 +59,8 @@ pub fn main() !void {
             },
             .directory => {
                 const d = try dir.openDir(name_slice, .{ .no_follow = false, .iterate = true });
-                try seq_parser.populate(&d);
-                const seq_or_null = seq_parser.get_longer_sequence();
+                try seq_parser_sub_dir.populate(&d);
+                const seq_or_null = seq_parser_sub_dir.get_longer_sequence();
                 if (seq_or_null != null) {
                     const seq = seq_or_null.?;
                     tls_line_instance.extra_type = tls_line.ExtraType.Sequence;
@@ -64,7 +72,7 @@ pub fn main() !void {
                         seq.sequence_split.split_end,
                         &tls_line_instance.extra,
                     );
-                    seq_parser.reset();
+                    seq_parser_sub_dir.reset();
                 }
             },
             else => {

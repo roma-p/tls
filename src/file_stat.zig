@@ -11,7 +11,7 @@ const c = @cImport({
     @cInclude("pwd.h");
 });
 
-const StatRefined = struct {
+pub const StatRefined = struct {
     owner: [constants.MAX_STR_LEN_OWNER]u8, // TODO: use strings...
     owner_len: usize,
     mode: u32,

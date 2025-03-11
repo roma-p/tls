@@ -18,12 +18,14 @@ const SequenceInfo = struct {
     sequence_split: sequence_split_mod.SequenceSplit,
     pattern_after: string.StringLongUnicode,
     pattern_before: string.StringLongUnicode,
+    idx_start: usize,
 
     pub fn init() SequenceInfo {
         return SequenceInfo{
             .sequence_split = sequence_split_mod.SequenceSplit.init(),
             .pattern_after = string.StringLongUnicode.init(),
             .pattern_before = string.StringLongUnicode.init(),
+            .idx_start = 0,
         };
     }
 };
@@ -57,7 +59,7 @@ pub fn deinit(self: *Self) void {
 }
 
 // TODO: 1. split into proper state machine.
-// TODO: 2. add posix support.
+// TODO: 2. add posix support. // Defuk did i meant?
 // TODO: 3. add  idx of the first file of the dir (i) -> to know where to put it in the term.
 pub fn populate(self: *Self, dir: *const fs.Dir) !void {
     self._dir_content.reset();
@@ -89,6 +91,7 @@ pub fn populate(self: *Self, dir: *const fs.Dir) !void {
                     const tmp = _build_seq_info_if_seq(
                         entry_buffer_1.name.get_slice(),
                         entry_buffer_2.name.get_slice(),
+                        i - 1
                     );
                     if (tmp != null) {
                         self._sequence_info_buff[j] = tmp.?;
@@ -154,25 +157,26 @@ pub fn get_longer_sequence(self: *const Self) ?SequenceInfo {
 fn _build_seq_info_if_seq(
     filename_1: []const u8,
     filename_2: []const u8,
+    i_start: usize,
 ) ?SequenceInfo {
     const sequence_result_or_null = sequence_utils.check_is_sequence_using_two_filenames(
         filename_1,
         filename_2,
     );
-    if (sequence_result_or_null != null) {
-        const sequence_result = sequence_result_or_null.?;
-        const pattern_before = filename_1[0..sequence_result.number_start_idx];
-        const pattern_after = filename_2[sequence_result.number_end_idx_filename_1..];
 
-        var ret = SequenceInfo.init();
-        ret.pattern_before.append_string(pattern_before);
-        ret.pattern_after.append_string(pattern_after);
-        ret.sequence_split.add_value(sequence_result.seq_number_filenam_1);
-        ret.sequence_split.add_value(sequence_result.seq_number_filenam_2);
-        return ret;
-    } else {
-        return null;
-    }
+    if (sequence_result_or_null == null) return null;
+
+    const sequence_result = sequence_result_or_null.?;
+    const pattern_before = filename_1[0..sequence_result.number_start_idx];
+    const pattern_after = filename_2[sequence_result.number_end_idx_filename_1..];
+
+    var ret = SequenceInfo.init();
+    ret.pattern_before.append_string(pattern_before);
+    ret.pattern_after.append_string(pattern_after);
+    ret.sequence_split.add_value(sequence_result.seq_number_filenam_1);
+    ret.sequence_split.add_value(sequence_result.seq_number_filenam_2);
+    ret.idx_start = i_start;
+    return ret;
 }
 
 test "get_seq_info" {
