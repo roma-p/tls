@@ -9,6 +9,12 @@ const term_writer = @import("term_writer.zig");
 
 const TermWriter = term_writer.TermWriter;
 
+pub const ExtraType = enum {
+    None,
+    Sequence,
+    Symlink,
+};
+
 permissions: Permissions,
 has_xattr: bool,
 size: Size,
@@ -17,12 +23,12 @@ date: Date,
 entry_name: string.StringLongUnicode,
 entry_kind: FileKind,
 extra: string.StringLongUnicode,
+extra_type: ExtraType,
+// TODO: has_extra_file
+
 
 _string_buffer: string.StringShortAscii,
 _term_writer: TermWriter,
-
-// TODO tagunion for extra: either symlink either sequence
-// TODO kind? used as type for typenum?
 
 const Date = struct {
 
@@ -308,6 +314,7 @@ pub fn init() Self {
         .entry_name = string.StringLongUnicode.init(),
         .entry_kind = undefined,
         .extra = string.StringLongUnicode.init(),
+        .extra_type = undefined,
         ._string_buffer = string.StringShortAscii.init(),
         ._term_writer = TermWriter.init(),
     };
@@ -323,6 +330,7 @@ pub fn reset(self: *Self) void {
     self.entry_name = undefined;
     self._string_buffer.reset();
     self.extra.reset();
+    self.extra = undefined;
 }
 
 pub fn deinit(self: *Self) void {
@@ -344,6 +352,7 @@ pub fn deinit(self: *Self) void {
     self._term_writer = undefined;
     self.extra.deinit();
     self.extra = undefined;
+    self.extra_type = undefined;
 }
 
 pub fn display_owner(self: *Self) !void {
@@ -358,26 +367,36 @@ pub fn display_xtattr(self: *Self) !void {
     }
 }
 
-pub fn display_entry_name(self: *Self, writer: *TermWriter) !void {
+pub fn display_entry_name(self: *Self) !void {
     const c: TermWriter.Color = switch(self.entry_kind) {
         .directory => .Blue,
         else => .White
     };
-    try writer.write(self.entry_name.get_slice(), c);
+    try self._term_writer.write(self.entry_name.get_slice(), c);
 }
 
-pub fn display(self: *Self, writer: *Writer) !void {
+pub fn display_sequence(self: *Self) !void {
+    try self._term_writer.write(" :: ", TermWriter.Color.White);
+    try self._term_writer.write(self.extra.get_slice(), TermWriter.Color.Cyan);
+}
+
+pub fn display(self: *Self) !void {
     const term_writer_ref = &self._term_writer;
     try self.permissions.display(term_writer_ref);
     try self.display_xtattr();
-    _ = try writer.write(" ");
+    try self._term_writer.write(" ", null);
     try self.display_owner();
-    _ = try writer.write(" ");
+    try self._term_writer.write(" ", null);
     try self.size.display(term_writer_ref);
-    _ = try writer.write(" ");
+    try self._term_writer.write(" ", null);
     try self.date.display(term_writer_ref);
-    _ = try writer.write(" ");
-    try self.display_entry_name(term_writer_ref);
-    _ = try writer.write("\n");
-    
+    try self._term_writer.write(" ", null);
+    try self.display_entry_name();
+
+    switch (self.extra_type) {
+        .None => {},
+        .Symlink => unreachable,
+        .Sequence => try self.display_sequence(),
+    }
+    try self._term_writer.write("\n", null);
 }

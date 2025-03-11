@@ -36,7 +36,7 @@ pub fn String(comptime max_len: usize, comptime string_type: type) type {
         }
 
         pub fn append_char(self: *Self, char: string_type) void {
-            if (self._str_len == self._array.len) return;
+            if (self._str_len >= self._array.len) return;
             self._array[self._str_len] = char;
             self._str_len += 1;
         }
@@ -46,7 +46,11 @@ pub fn String(comptime max_len: usize, comptime string_type: type) type {
             var max_i: usize = 0;
 
             if ((self._str_len + str.len) > self._array.len) {
-                max_i = self._array.len - self._str_len;
+                if (self._array.len > self._str_len) {
+                    max_i = self._array.len - self._str_len;
+                } else {
+                    max_i = 0;
+                }
             } else {
                 max_i = str.len;
             }
@@ -124,7 +128,7 @@ pub fn String(comptime max_len: usize, comptime string_type: type) type {
         }
 
         inline fn _conv_zero_padd_to_str(comptime zero_padding: usize) *const [1:0]u8 {
-            // TODO: better comppilation time method to do this?
+            // TODO: better compilation time method to do this?
             return switch (zero_padding) {
                 0 => "0",
                 1 => "1",
