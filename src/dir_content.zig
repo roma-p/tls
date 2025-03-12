@@ -40,7 +40,7 @@ pub const DirContent = struct {
     }
 
     pub fn reset(self: *Self) void {
-        self.dir_entry_array.array = [_]DirEntry{default_dir_entry} ** constants.MAX_FILE_IN_DIR;
+        self.dir_entry_array.set_to_default();
         self.dir_entry_array.reset();
     }
 

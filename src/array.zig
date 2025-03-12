@@ -20,6 +20,10 @@ pub fn Array(comptime max_len: usize, comptime T: type, default: T) type {
             self.len = 0;
         }
 
+        pub fn set_to_default(self: *Self) void {
+            self.array = [_]T{default} ** max_len;
+        }
+
         pub fn deinit(self: *Self) void {
             self.array = undefined;
             self.len = 0;
