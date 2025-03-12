@@ -56,7 +56,7 @@ pub fn has_any_extended_attributes(path: []const u8) !bool {
         path.ptr,
         null, // Don't retrieve actual attributes
         0, // Get required buffer size
-        // 0, // options flags.
+        0, // options flags.
     );
 
     if (result > 0) {

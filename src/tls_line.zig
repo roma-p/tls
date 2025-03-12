@@ -26,14 +26,12 @@ extra: string.StringLongUnicode,
 extra_type: ExtraType,
 // TODO: has_extra_file
 
-
 _string_buffer: string.StringShortAscii,
 _term_writer: TermWriter,
 
 const Date = struct {
-
     const DayString = string.String(2, u8);
-        
+
     less_than_a_year_ago: u1,
     day: DayString,
     month: [3]u8,
@@ -118,9 +116,9 @@ const Date = struct {
 
     pub fn display(self: *Date, writer: *TermWriter) !void {
         const c = TermWriter.Color.Blue;
-        try writer.write(&self.month, c);
-        try writer.write(" ", null);
         try writer.write(self.day.get_slice(), c);
+        try writer.write(" ", null);
+        try writer.write(&self.month, c);
         try writer.write(" ", null);
         try writer.write(&self.year_or_hour, c);
     }
@@ -240,7 +238,7 @@ const Size = struct {
     }
 };
 
-const Permissions = struct{
+const Permissions = struct {
     permissions: [10]u8,
 
     pub fn init() Permissions {
@@ -289,15 +287,15 @@ const Permissions = struct{
 
     pub fn display(self: *Permissions, writer: *TermWriter) !void {
         for (self.permissions) |c| {
-            const r : []const u8 = &[1]u8{ c };
+            const r: []const u8 = &[1]u8{c};
             const color: TermWriter.Color = switch (c) {
                 'r' => .Yellow,
                 'w' => .Red,
                 'x' => .Green,
                 'd' => .Blue,
-                else => .White
+                else => .White,
             };
-            _ = try writer.write(r, color); 
+            _ = try writer.write(r, color);
         }
     }
 };
@@ -361,16 +359,16 @@ pub fn display_owner(self: *Self) !void {
 
 pub fn display_xtattr(self: *Self) !void {
     if (self.has_xattr) {
-    _ = try self._term_writer.write("@", TermWriter.Color.Green);
+        _ = try self._term_writer.write("@", TermWriter.Color.Green);
     } else {
-    _ = try self._term_writer.write(" ", null);
+        _ = try self._term_writer.write(" ", null);
     }
 }
 
 pub fn display_entry_name(self: *Self) !void {
-    const c: TermWriter.Color = switch(self.entry_kind) {
+    const c: TermWriter.Color = switch (self.entry_kind) {
         .directory => .Blue,
-        else => .White
+        else => .White,
     };
     try self._term_writer.write(self.entry_name.get_slice(), c);
 }
@@ -385,9 +383,9 @@ pub fn display(self: *Self) !void {
     try self.permissions.display(term_writer_ref);
     try self.display_xtattr();
     try self._term_writer.write(" ", null);
-    try self.display_owner();
-    try self._term_writer.write(" ", null);
     try self.size.display(term_writer_ref);
+    try self._term_writer.write(" ", null);
+    try self.display_owner();
     try self._term_writer.write(" ", null);
     try self.date.display(term_writer_ref);
     try self._term_writer.write(" ", null);

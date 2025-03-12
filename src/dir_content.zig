@@ -22,6 +22,7 @@ pub const DirContent = struct {
     };
     const Self = @This();
 
+    // TODO : use array
     dir_entry_sorted: [constants.MAX_FILE_IN_DIR]DirEntry,
     dir_entry_len: usize,
 

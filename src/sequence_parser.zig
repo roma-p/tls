@@ -9,6 +9,7 @@ const _dir_content = @import("dir_content.zig");
 const DirContent = _dir_content.DirContent;
 
 // TODO : 2 struct: 'builder'  + info for real...
+// TODO :  use array.
 _sequence_info_buff: [100]SequenceInfo,
 _sequence_info_buff_len: usize,
 
@@ -79,11 +80,7 @@ pub fn populate(self: *Self, dir_content: *DirContent) !void {
                 // AS STATE...
                 .file => {
                     entry_buffer_2 = e;
-                    const tmp = _build_seq_info_if_seq(
-                        entry_buffer_1.name.get_slice(),
-                        entry_buffer_2.name.get_slice(),
-                        i - 1
-                    );
+                    const tmp = _build_seq_info_if_seq(entry_buffer_1.name.get_slice(), entry_buffer_2.name.get_slice(), i - 1);
                     if (tmp != null) {
                         self._sequence_info_buff[j] = tmp.?;
                         state = ParsingSeqState.ParsingSequence;

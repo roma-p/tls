@@ -1,5 +1,7 @@
 const std = @import("std");
 const constants = @import("constants.zig");
+const _array = @import("array.zig");
+const Array = _array.Array;
 
 // not yet unicode...
 pub const StringLongUnicode = String(constants.MAX_STR_LEN_ENTRY, u8);
@@ -8,56 +10,32 @@ pub const StringShortAscii = String(constants.MAX_STR_LEN_OWNER, u8);
 
 pub fn String(comptime max_len: usize, comptime string_type: type) type {
     return struct {
-        _array: [max_len]string_type,
-        _str_len: usize,
+        _array: Array(max_len, string_type, ' '),
         _append_number_buffer: [16]string_type,
 
         const Self = @This();
 
         pub fn init() Self {
             return Self{
-                ._array = [_]string_type{' '} ** max_len,
-                ._str_len = 0,
+                ._array = Array(max_len, string_type, ' ').init(),
                 ._append_number_buffer = undefined,
             };
         }
 
         pub fn reset(self: *Self) void {
-            self._str_len = 0;
+            self._array.reset();
         }
 
         pub fn deinit(self: *Self) void {
-            var i: usize = 0;
-            while (i < self._array.len) : (i += 1) {
-                self._array[i] = ' ';
-            }
-            self._str_len = 0;
-            self._array = undefined;
+            self._array.deinit();
         }
 
         pub fn append_char(self: *Self, char: string_type) void {
-            if (self._str_len >= self._array.len) return;
-            self._array[self._str_len] = char;
-            self._str_len += 1;
+            _ = self._array.append(char);
         }
 
         pub fn append_string(self: *Self, str: []const string_type) void {
-            var i: usize = 0;
-            var max_i: usize = 0;
-
-            if ((self._str_len + str.len) > self._array.len) {
-                if (self._array.len > self._str_len) {
-                    max_i = self._array.len - self._str_len;
-                } else {
-                    max_i = 0;
-                }
-            } else {
-                max_i = str.len;
-            }
-            while (i < max_i) : (i += 1) {
-                self._array[self._str_len + i] = str[i];
-            }
-            self._str_len += i;
+            _ = self._array.extend(str);
         }
 
         pub fn append_number(
@@ -99,8 +77,7 @@ pub fn String(comptime max_len: usize, comptime string_type: type) type {
         }
 
         pub fn set_string(self: *Self, str: []const string_type) void {
-            self.reset();
-            self.append_string(str);
+            _ = self._array.set(str);
         }
 
         pub fn print_debug(self: *const Self) void {
@@ -108,23 +85,15 @@ pub fn String(comptime max_len: usize, comptime string_type: type) type {
         }
 
         pub fn trim_str(self: *Self, trim_range: usize) void {
-            self._str_len -= @min(trim_range, self._str_len);
+            self._array.trim(trim_range);
         }
 
         pub fn get_slice(self: *const Self) []const string_type {
-            return self._array[0..self._str_len];
+            return self._array.get_slice();
         }
 
         pub fn copy_to_arr(self: *Self, dst: []string_type, dst_shift: ?usize) void {
-
-            const i_dst_shift: usize = if(dst_shift != null) dst_shift.? else 0;
-
-            const i_end = @min(self._str_len, dst.len - i_dst_shift);
-            var i: usize = 0;
-
-            while (i < i_end): (i+=1) {
-                dst[i + i_dst_shift] = self._array[i];
-            }
+            self._array.copy_to_arr(dst, dst_shift);
         }
 
         inline fn _conv_zero_padd_to_str(comptime zero_padding: usize) *const [1:0]u8 {
