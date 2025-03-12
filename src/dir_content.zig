@@ -3,10 +3,12 @@ const constants = @import("constants.zig");
 const string = @import("string.zig");
 
 const fs = std.fs;
-// const DirEntry = fs.Dir.Entry;
 const Dir = fs.Dir;
 const FileKind = fs.File.Kind;
 const StringLongUnicode = string.StringLongUnicode;
+
+const _array = @import("array.zig");
+const Array = _array.Array;
 
 // CustomDirEntry with StackOnStrings. name dooes not belong to me, only memory view.
 
@@ -20,27 +22,29 @@ pub const DirContent = struct {
         .name = StringLongUnicode.init(),
         .kind = .file,
     };
+
+    const DirEntryArray = Array(
+        constants.MAX_FILE_IN_DIR,
+        DirEntry,
+        default_dir_entry,
+    );
+
     const Self = @This();
 
-    // TODO : use array
-    dir_entry_sorted: [constants.MAX_FILE_IN_DIR]DirEntry,
-    dir_entry_len: usize,
+    dir_entry_array: DirEntryArray,
 
     pub fn init() Self {
         return Self{
-            .dir_entry_sorted = [1]DirEntry{default_dir_entry} ** constants.MAX_FILE_IN_DIR,
-            .dir_entry_len = 0,
+            .dir_entry_array = DirEntryArray.init(),
         };
     }
 
     pub fn reset(self: *Self) void {
-        self.dir_entry_sorted = [1]DirEntry{default_dir_entry} ** constants.MAX_FILE_IN_DIR;
-        self.dir_entry_len = 0;
+        self.dir_entry_array.reset();
     }
 
     pub fn deinit(self: *Self) void {
-        self.dir_entry_sorted = undefined;
-        self.dir_entry_len = 0;
+        self.dir_entry_array.deinit();
     }
 
     pub fn populate(self: *Self, dir: *const Dir) !void {
@@ -51,18 +55,18 @@ pub const DirContent = struct {
 
         while (try walker.next()) |entry| {
             if (i >= constants.MAX_FILE_IN_DIR) break; // overflow.
-            self.dir_entry_sorted[i].kind = entry.kind;
-            self.dir_entry_sorted[i].name.append_string(entry.name);
+            self.dir_entry_array.array[i].kind = entry.kind;
+            self.dir_entry_array.array[i].name.append_string(entry.name);
             i += 1;
         }
-        std.mem.sort(DirEntry, &self.dir_entry_sorted, {}, _less_than);
-        self.dir_entry_len = i;
+        std.mem.sort(DirEntry, &self.dir_entry_array.array, {}, _less_than);
+        self.dir_entry_array.len = i;
 
         walker = undefined;
     }
 
-    pub fn get_slice(self: *Self) []DirEntry {
-        return self.dir_entry_sorted[0..self.dir_entry_len];
+    pub fn get_slice(self: *Self) []const DirEntry {
+        return self.dir_entry_array.get_slice();
     }
 
     pub fn print_debug(self: *Self) void {
