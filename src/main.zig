@@ -17,8 +17,7 @@ const tls_line = @import("tls_line.zig");
 
 const def_entry = DirEntry{ .name = "", .kind = .file };
 
-
-fn set_tls_line(entry: *const DirContent.DirEntry, tls_line_instance: *tls_line, stat_refined: file_stat.StatRefined) void{
+fn set_tls_line(entry: *const DirContent.DirEntry, tls_line_instance: *tls_line, stat_refined: file_stat.StatRefined) void {
     tls_line_instance.size.set_from_size(stat_refined.size);
     tls_line_instance.permissions.set_from_mode(stat_refined.mode);
     tls_line_instance.has_xattr = stat_refined.has_xattr;
@@ -77,6 +76,8 @@ pub fn main() !void {
                         &tls_line_instance.extra,
                     );
                     seq_parser_sub_dir.reset();
+                } else {
+                    tls_line_instance.extra_type = tls_line.ExtraType.None;
                 }
             },
             else => {
