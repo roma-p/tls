@@ -81,7 +81,7 @@ pub fn String(comptime max_len: usize, comptime string_type: type) type {
         }
 
         pub fn print_debug(self: *const Self) void {
-            std.debug.print("{s}\n", .{self._array[0..self._str_len]});
+            std.debug.print("{s}\n", .{self._array.array[0..self._array.len]});
         }
 
         pub fn trim_str(self: *Self, trim_range: usize) void {
