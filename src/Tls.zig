@@ -26,6 +26,8 @@ _dir_entry_idx: usize,
 
 _state: State,
 _curr_seq_idx: usize,
+_curr_seq_start_idx: usize,
+_curr_seq_end_idx: usize,
 _seq_nbr: usize,
 _has_sequence: bool,
 
@@ -47,6 +49,8 @@ pub fn init() Self {
         ._dir_entry_idx = 0,
         ._state = undefined,
         ._curr_seq_idx = undefined,
+        ._curr_seq_start_idx = undefined,
+        ._curr_seq_end_idx = undefined,
         ._seq_nbr = undefined,
         ._has_sequence = undefined,
     };
@@ -72,12 +76,11 @@ pub fn process(self: *Self) !void {
     );
 
     const seq_nbr = self.sequence_parser.sequence_info_array._array_seq_start_idx.len;
-    if (self.sequence_parser.sequence_info_array._array_seq_start_idx.len == 0) {
+    if (seq_nbr == 0) {
         self._has_sequence = false;
+        self._state = .OutSequence;
     } else {
-        self._has_sequence = false;
-        self._curr_seq_idx = 0;
-        self._seq_nbr = seq_nbr;
+        self._update_state_and_seq_iterator();
     }
 
     self._dir_entry_slice = self.dir_content_cur_dir.get_slice();
@@ -87,6 +90,29 @@ pub fn process(self: *Self) !void {
         try self._process_single_entry();
     }
 }
+
+fn _update_state_and_seq_iterator(self: *Self) void {
+    if (self._state == .OutSequence) {
+        if (!self._has_sequence) return;
+        if (self._dir_entry_idx < self._curr_seq_start_idx) return;
+        self._state = .InSequence;
+    } else {
+        if (self._dir_entry_idx <= self._curr_seq_end_idx) return;
+        self._state = .OutSequence;
+        self._curr_seq_idx += 1;
+        self._update_seq_iterator();
+    }
+}
+
+fn _update_seq_iterator(self: *Self) void {
+    if (self._curr_seq_idx == self._seq_nbr) {
+        self._has_sequence = false;
+        return;
+    }
+    self._curr_seq_start_idx = self.sequence_info_array_cur_dir._array_seq_start_idx.array[self._curr_seq_idx];
+    self._curr_seq_end_idx = self._curr_seq_start_idx + self.sequence_info_array_cur_dir._array_seq_info.array[self._curr_seq_idx].sequence_split.compute_len();
+}
+
 
 fn _process_single_entry(self: *Self) !void {
     const entry = self._dir_entry_slice[self._dir_entry_idx];
