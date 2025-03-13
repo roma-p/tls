@@ -20,8 +20,7 @@ pub const StatRefined = struct {
     has_xattr: bool,
 };
 
-// TODO: term entry?
-
+// TODO: rework this as a single module (like DateTime)
 pub fn posix_stat(dir: Dir, path: []const u8) !StatRefined {
     const stat = try posix.fstatat(dir.fd, path, 0); // TODO: return "unknown stat..."
     const psswd = c.getpwuid(stat.uid);

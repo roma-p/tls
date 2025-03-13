@@ -2,6 +2,7 @@ const std = @import("std");
 const string = @import("../data_structure/string.zig");
 const constants = @import("../constants.zig");
 
+// TODO: change this to SectionSequence. Input shall be "SequenecInfo"
 pub fn format_sequence(
     pattern_before: []const u8,
     pattern_after: []const u8,

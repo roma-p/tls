@@ -11,8 +11,6 @@ const file_stat = @import("file_structure/file_stat.zig"); // TODO: rework this 
 
 const Self = @This();
 
-// TODO: dir?
-
 dir_fs: fs.Dir,
 dir_content_cur_dir: DirContent,
 dir_content_sub_dir: DirContent,
@@ -68,11 +66,11 @@ pub fn process(self: *Self) !void {
 }
 
 fn _process_single_entry(self: *Self) !void {
-
     const entry = self._dir_entry_slice[self._dir_entry_idx];
-
-    const name_slice = entry.name.get_slice();
-    const stat_refined = try file_stat.posix_stat(self.dir_fs, name_slice);
+    const stat_refined = try file_stat.posix_stat(
+        self.dir_fs,
+        entry.name.get_slice()
+    );
     self._set_tls_line(&entry, stat_refined);
 
     switch (entry.kind) {
@@ -80,29 +78,7 @@ fn _process_single_entry(self: *Self) !void {
             self.tls_line.extra_type = TlsLine.ExtraType.None;
         },
         .directory => {
-            const d = try self.dir_fs.openDir(name_slice, .{ .no_follow = false, .iterate = true });
-
-            try self.dir_content_sub_dir.populate(&d);
-            self.sequence_parser.parse_sequence(
-                self.dir_content_sub_dir.get_slice(), 
-                &self.sequence_info_array_sub_dir,
-            );
-
-            const seq_or_null = self.sequence_info_array_sub_dir.get_longer_sequence();
-            if (seq_or_null != null) {
-                const seq = seq_or_null.?;
-                self.tls_line.extra_type = TlsLine.ExtraType.Sequence;
-                self.tls_line.extra.reset();
-                format_sequence.format_sequence(
-                    seq.pattern_before.get_slice(),
-                    seq.pattern_after.get_slice(),
-                    &seq.sequence_split.array,
-                    seq.sequence_split.split_end,
-                    &self.tls_line.extra,
-                );
-            } else {
-                self.tls_line.extra_type = TlsLine.ExtraType.None;
-            }
+            try self._process_single_dir();
         },
         else => {
             self.tls_line.extra_type = TlsLine.ExtraType.None;
@@ -112,16 +88,54 @@ fn _process_single_entry(self: *Self) !void {
     self.tls_line.reset();
 }
 
+fn _process_single_dir(self: *Self) !void {
+    const entry = self._dir_entry_slice[self._dir_entry_idx];
+    const d = try self.dir_fs.openDir(
+        entry.name.get_slice(),
+        .{ .no_follow = false, .iterate = true }
+    );
+
+    try self.dir_content_sub_dir.populate(&d);
+    self.sequence_parser.parse_sequence(
+        self.dir_content_sub_dir.get_slice(), 
+        &self.sequence_info_array_sub_dir,
+    );
+
+    const seq_or_null = self.sequence_info_array_sub_dir.get_longer_sequence();
+    if (seq_or_null != null) {
+        const seq = seq_or_null.?;
+        self.tls_line.extra_type = TlsLine.ExtraType.Sequence;
+        self.tls_line.extra.reset();
+        format_sequence.format_sequence(
+            seq.pattern_before.get_slice(),
+            seq.pattern_after.get_slice(),
+            &seq.sequence_split.array,
+            seq.sequence_split.split_end,
+            &self.tls_line.extra,
+        );
+    } else {
+        self.tls_line.extra_type = TlsLine.ExtraType.None;
+    }
+}
+
 fn _set_tls_line(
         self: *Self,
         entry: *const DirContent.DirEntry,
         stat_refined: file_stat.StatRefined
 ) void {
-    self.tls_line.size.set_from_size(stat_refined.size);
     self.tls_line.permissions.set_from_mode(stat_refined.mode);
     self.tls_line.has_xattr = stat_refined.has_xattr;
+    self.tls_line.size.set_from_size(stat_refined.size);
     self.tls_line.owner.set_string(stat_refined.owner[0..stat_refined.owner_len]);
     self.tls_line.date.set_from_epoch(stat_refined.mtime);
     self.tls_line.entry_name.set_string(entry.name.get_slice());
     self.tls_line.entry_kind = entry.kind;
+}
+
+fn _update_tls_line(
+        self: *Self,
+        // entry: *const DirContent.DirEntry,
+        stat_refined: file_stat.StatRefined
+) void {
+    self.tls_line.size.update_from_size(stat_refined.mode);
 }
