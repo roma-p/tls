@@ -1,7 +1,6 @@
 const std = @import("std");
-const constants = @import("constants.zig");
-const _array = @import("array.zig");
-const Array = _array.Array;
+const constants = @import("../constants.zig"); // delme
+const Array = @import("array.zig").Array;
 
 // not yet unicode...
 pub const StringLongUnicode = String(constants.MAX_STR_LEN_ENTRY, u8);

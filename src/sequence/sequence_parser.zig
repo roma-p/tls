@@ -1,12 +1,11 @@
 const std = @import("std");
 const fs = std.fs;
 
-const sequence_split_mod = @import("sequence_split.zig");
+const SequenceSplit = @import("SequenceSplit.zig");
 const sequence_utils = @import("sequence_utils.zig");
-const string = @import("string.zig");
-const constants = @import("constants.zig");
-const _dir_content = @import("dir_content.zig");
-const DirContent = _dir_content.DirContent;
+const string = @import("../data_structure/string.zig");
+const constants = @import("../constants.zig");
+const DirContent = @import("../file_structure/DirContent.zig");
 
 // TODO : 2 struct: 'builder'  + info for real...
 // TODO :  use array.
@@ -14,14 +13,14 @@ _sequence_info_buff: [100]SequenceInfo,
 _sequence_info_buff_len: usize,
 
 const SequenceInfo = struct {
-    sequence_split: sequence_split_mod.SequenceSplit,
+    sequence_split: SequenceSplit,
     pattern_after: string.StringLongUnicode,
     pattern_before: string.StringLongUnicode,
     idx_start: usize,
 
     pub fn init() SequenceInfo {
         return SequenceInfo{
-            .sequence_split = sequence_split_mod.SequenceSplit.init(),
+            .sequence_split = SequenceSplit.init(),
             .pattern_after = string.StringLongUnicode.init(),
             .pattern_before = string.StringLongUnicode.init(),
             .idx_start = 0,

@@ -2,22 +2,20 @@ const std = @import("std");
 const fs = std.fs;
 const DirEntry = fs.Dir.Entry;
 
-const sequence_split = @import("sequence_split.zig");
-const sequence_parser = @import("sequence_parser.zig");
-const format_sequence = @import("format_sequence.zig");
-const SequenceSplit = sequence_split.SequenceSplit;
-const string = @import("string.zig");
+const SequenceSplit = @import("sequence/SequenceSplit.zig");
+const sequence_parser = @import("sequence/sequence_parser.zig");
+const format_sequence = @import("tls_line/format_sequence.zig");
+const string = @import("data_structure/string.zig");
 const StringLongUnicode = string.StringLongUnicode;
 const StringShortUnicode = string.StringShortUnicode;
 const constants = @import("constants.zig");
-const file_stat = @import("file_stat.zig");
-const _dir_content = @import("dir_content.zig");
-const DirContent = _dir_content.DirContent;
-const tls_line = @import("tls_line.zig");
+const file_stat = @import("file_structure/file_stat.zig");
+const DirContent = @import("file_structure/DirContent.zig");
+const TlsLine = @import("tls_line/TlsLine.zig");
 
 const def_entry = DirEntry{ .name = "", .kind = .file };
 
-fn set_tls_line(entry: *const DirContent.DirEntry, tls_line_instance: *tls_line, stat_refined: file_stat.StatRefined) void {
+fn set_tls_line(entry: *const DirContent.DirEntry, tls_line_instance: *TlsLine, stat_refined: file_stat.StatRefined) void {
     tls_line_instance.size.set_from_size(stat_refined.size);
     tls_line_instance.permissions.set_from_mode(stat_refined.mode);
     tls_line_instance.has_xattr = stat_refined.has_xattr;
@@ -28,7 +26,7 @@ fn set_tls_line(entry: *const DirContent.DirEntry, tls_line_instance: *tls_line,
 }
 
 pub fn main() !void {
-    var tls_line_instance = tls_line.init();
+    var tls_line_instance = TlsLine.init();
     defer tls_line_instance.deinit();
 
     var dir_content_curr = DirContent.init();
@@ -57,7 +55,7 @@ pub fn main() !void {
 
         switch (entry.kind) {
             .file => {
-                tls_line_instance.extra_type = tls_line.ExtraType.None;
+                tls_line_instance.extra_type = TlsLine.ExtraType.None;
             },
             .directory => {
                 const d = try dir.openDir(name_slice, .{ .no_follow = false, .iterate = true });
@@ -66,7 +64,7 @@ pub fn main() !void {
                 const seq_or_null = seq_parser_sub_dir.get_longer_sequence();
                 if (seq_or_null != null) {
                     const seq = seq_or_null.?;
-                    tls_line_instance.extra_type = tls_line.ExtraType.Sequence;
+                    tls_line_instance.extra_type = TlsLine.ExtraType.Sequence;
                     tls_line_instance.extra.reset();
                     format_sequence.format_sequence(
                         seq.pattern_before.get_slice(),
@@ -77,11 +75,11 @@ pub fn main() !void {
                     );
                     seq_parser_sub_dir.reset();
                 } else {
-                    tls_line_instance.extra_type = tls_line.ExtraType.None;
+                    tls_line_instance.extra_type = TlsLine.ExtraType.None;
                 }
             },
             else => {
-                tls_line_instance.extra_type = tls_line.ExtraType.None;
+                tls_line_instance.extra_type = TlsLine.ExtraType.None;
             },
         }
         try tls_line_instance.display();

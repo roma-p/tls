@@ -2,18 +2,12 @@ const std = @import("std");
 const fs = std.fs;
 const Writer = fs.File.Writer;
 const FileKind = fs.File.Kind;
-const string = @import("string.zig");
+const string = @import("../data_structure/string.zig");
 const format_date = @import("format_date.zig");
-const zig_utils = @import("zig_utils.zig");
-const term_writer = @import("term_writer.zig");
+const zig_utils = @import("../zig_utils.zig");
+const TermWriter = @import("../TermWriter.zig");
 
-const TermWriter = term_writer.TermWriter;
-
-pub const ExtraType = enum {
-    None,
-    Sequence,
-    Symlink,
-};
+const Self = @This();
 
 permissions: Permissions,
 has_xattr: bool,
@@ -28,6 +22,12 @@ extra_type: ExtraType,
 
 _string_buffer: string.StringShortAscii,
 _term_writer: TermWriter,
+
+pub const ExtraType = enum {
+    None,
+    Sequence,
+    Symlink,
+};
 
 const Date = struct {
     const DayString = string.String(2, u8);
@@ -300,7 +300,6 @@ const Permissions = struct {
     }
 };
 
-const Self = @This();
 
 pub fn init() Self {
     return Self{

@@ -1,10 +1,10 @@
 const std = @import("std");
-const constants = @import("constants.zig");
+const constants = @import("../constants.zig");
 const os = std.os;
 const posix = std.posix;
 const PosixStat = std.posix.Stat;
 const Dir = std.fs.Dir;
-const string = @import("string.zig");
+const string = @import("../data_structure/string.zig");
 
 const c = @cImport({
     @cInclude("sys/xattr.h");
@@ -50,13 +50,12 @@ pub fn posix_stat(dir: Dir, path: []const u8) !StatRefined {
     return ret;
 }
 
-// add this to StatRefined.
 pub fn has_any_extended_attributes(path: []const u8) !bool {
     const result = c.listxattr(
         path.ptr,
         null, // Don't retrieve actual attributes
         0, // Get required buffer size
-        0, // options flags.
+        // 0, // options flags.
     );
 
     if (result > 0) {

@@ -1,6 +1,6 @@
 const std = @import("std");
-const string = @import("string.zig");
-const constants = @import("constants.zig");
+const string = @import("../data_structure/string.zig");
+const constants = @import("../constants.zig");
 
 pub fn format_sequence(
     pattern_before: []const u8,
