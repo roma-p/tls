@@ -3,9 +3,9 @@ const fs = std.fs;
 const Writer = fs.File.Writer;
 const FileKind = fs.File.Kind;
 const string = @import("../data_structure/string.zig");
-const format_date = @import("format_date.zig");
 const zig_utils = @import("../zig_utils.zig");
 const TermWriter = @import("../TermWriter.zig");
+const SectionDate = @import("SectionDate.zig");
 
 const Self = @This();
 
@@ -13,7 +13,7 @@ permissions: Permissions,
 has_xattr: bool,
 size: Size,
 owner: string.StringShortUnicode,
-date: Date,
+date: SectionDate,
 entry_name: string.StringLongUnicode,
 entry_kind: FileKind,
 extra: string.StringLongUnicode,
@@ -27,113 +27,6 @@ pub const ExtraType = enum {
     None,
     Sequence,
     Symlink,
-};
-
-const Date = struct {
-    const DayString = string.String(2, u8);
-
-    less_than_a_year_ago: u1,
-    day: DayString,
-    month: [3]u8,
-    year_or_hour: [5]u8,
-    _now: format_date.DateTime,
-    _string_buffer: string.StringShortAscii,
-
-    pub fn init() Date {
-        return Date{
-            .less_than_a_year_ago = 0,
-            .day = DayString.init(),
-            .month = [_]u8{ ' ', ' ', ' ' },
-            .year_or_hour = [_]u8{ ' ', ' ', ' ', ' ', ' ' },
-            ._now = format_date.generate_datetime_from_epoch(@intCast(std.time.timestamp())),
-            ._string_buffer = string.StringShortAscii.init(),
-        };
-    }
-
-    pub fn reset(self: *Date) void {
-        self.less_than_a_year_ago = 0;
-        self.day.reset();
-        self.month = [_]u8{ ' ', ' ', ' ' };
-        self.year_or_hour = [_]u8{ ' ', ' ', ' ', ' ', ' ' };
-    }
-
-    pub fn deinit(self: *Date) void {
-        self.less_than_a_year_ago = undefined;
-        self.day.deinit();
-        self.day = undefined;
-        self.month = undefined;
-        self.year_or_hour = undefined;
-        self._now = undefined;
-        self._string_buffer.deinit();
-        self._string_buffer = undefined;
-    }
-
-    pub fn init_from_epoch(
-        epoch: u64,
-        now: format_date.DateTime,
-        string_buffer: *string.StringShortAscii,
-    ) Date {
-        const date = format_date.generate_datetime_from_epoch(epoch);
-        const is_older_by_a_year = Date._is_date_older_by_a_year(now, date);
-        var ret = Date.init();
-
-        string_buffer.reset();
-        string_buffer.append_number(u8, date.day, 2, null);
-        const day_slice = string_buffer.get_slice();
-        // TODO: copy helper... whith len...
-
-        ret.day.set_string(day_slice);
-
-        const month_tmp = format_date.conv_mont_id_to_trigram(date.month);
-        zig_utils.copy_arr(u8, month_tmp, &ret.month, 3);
-
-        string_buffer.reset();
-        if (is_older_by_a_year) {
-            string_buffer.append_number(u16, date.year, null, null);
-            string_buffer.copy_to_arr(&ret.year_or_hour, null);
-        } else {
-            string_buffer.append_number(u8, date.hour, null, 2);
-            string_buffer.copy_to_arr(&ret.year_or_hour, null);
-            ret.year_or_hour[2] = ':';
-            string_buffer.reset();
-            string_buffer.append_number(u8, date.minute, null, 2);
-            string_buffer.copy_to_arr(&ret.year_or_hour, 3);
-            string_buffer.reset();
-        }
-        return ret;
-    }
-
-    pub fn set_from_epoch(
-        self: *Date,
-        epoch: u64,
-    ) void {
-        const tmp = Date.init_from_epoch(epoch, self._now, &self._string_buffer);
-        self.less_than_a_year_ago = tmp.less_than_a_year_ago;
-        self.day = tmp.day;
-        self.month = tmp.month;
-        self.year_or_hour = tmp.year_or_hour;
-    }
-
-    pub fn display(self: *Date, writer: *TermWriter) !void {
-        const c = TermWriter.Color.Blue;
-        try writer.write(self.day.get_slice(), c);
-        try writer.write(" ", null);
-        try writer.write(&self.month, c);
-        try writer.write(" ", null);
-        try writer.write(&self.year_or_hour, c);
-    }
-
-    fn _is_date_older_by_a_year(now: format_date.DateTime, date: format_date.DateTime) bool {
-        if (date.year == now.year) {
-            return false;
-        } else if (date.year + 1 < now.year) {
-            return true;
-        } else if (date.month < now.month) {
-            return false;
-        } else {
-            return true;
-        }
-    }
 };
 
 const Size = struct {
@@ -307,7 +200,7 @@ pub fn init() Self {
         .has_xattr = false,
         .size = Size.init(),
         .owner = string.StringShortUnicode.init(),
-        .date = Date.init(),
+        .date = SectionDate.init(),
         .entry_name = string.StringLongUnicode.init(),
         .entry_kind = undefined,
         .extra = string.StringLongUnicode.init(),

@@ -1,33 +1,15 @@
 const std = @import("std");
 const mem = std.mem;
 
-pub const DateTime = struct {
-    year: u16,
-    month: u8,
-    day: u8,
-    hour: u8,
-    minute: u8,
-};
+const Self = @This();
 
-pub fn conv_mont_id_to_trigram(month_id: u8) []const u8 {
-    return switch (month_id) {
-        1 => "Jan",
-        2 => "Feb",
-        3 => "Mar",
-        4 => "Apr",
-        5 => "May",
-        6 => "Jun",
-        7 => "Jul",
-        8 => "Aug",
-        9 => "Sep",
-        10 => "Oct",
-        11 => "Nov",
-        12 => "Dec",
-        else => "Dec", // FIXME: handle err here?
-    };
-}
+year: u16,
+month: u8,
+day: u8,
+hour: u8,
+minute: u8,
 
-pub fn generate_datetime_from_epoch(ts: u64) DateTime {
+pub fn init(ts: u64) Self {
     const SECONDS_PER_DAY = 86400;
     const DAYS_PER_YEAR = 365;
     const DAYS_IN_4YEARS = 1461;
@@ -64,7 +46,7 @@ pub fn generate_datetime_from_epoch(ts: u64) DateTime {
     const hour: u8 = @intCast(seconds_since_midnight / 3600);
     const minute: u8 = @intCast((seconds_since_midnight % 3600) / 60);
 
-    return DateTime{
+    return Self{
         .year = year,
         .month = month,
         .day = day,
@@ -75,7 +57,7 @@ pub fn generate_datetime_from_epoch(ts: u64) DateTime {
 
 test "parse timestamp with minutes" {
     const timestamp = 1640995200; // January 1, 2022 00:00:00 UTC
-    const dt = generate_datetime_from_epoch(timestamp);
+    const dt = init(timestamp);
 
     try std.testing.expectEqual(@as(u16, 2022), dt.year);
     try std.testing.expectEqual(@as(u8, 1), dt.month); // January
