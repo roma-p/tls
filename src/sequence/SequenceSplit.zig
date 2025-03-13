@@ -63,7 +63,6 @@ pub fn add_value(self: *Self, value: u16) void {
         }
     }
     if (j == self.array.len) return; // TODO return err here!!!
-    //
     j += 2;
     self.array[j] = value;
     self.array[j + 1] = 0;
@@ -82,7 +81,7 @@ pub fn compute_len(self: *const Self) usize {
     // TODO : test me
     var i: usize = 0;
     var j: usize = 0;
-    while (i < self.split_end) : (i += 2) {
+    while (i < self.split_end / 2) : (i += 2) {
         j += 1 + self.array[i + 1];
     }
     return j;
@@ -176,4 +175,12 @@ test "test_sequence_split_add_value" {
     sequence_split.add_value(3);
     try std.testing.expectEqual([_]u16{ 1, 9 }, sequence_split.array[0..2].*);
     try std.testing.expectEqual(1, sequence_split.split_end);
+
+    var sequence_split_2 = Self.init();
+    sequence_split_2.add_value(2);
+    sequence_split_2.add_value(3);
+    sequence_split_2.add_value(4);
+    sequence_split_2.add_value(5);
+    try std.testing.expectEqual([_]u16{ 2, 3 }, sequence_split_2.array[0..2].*);
+    try std.testing.expectEqual(1, sequence_split_2.split_end);
 }

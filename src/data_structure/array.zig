@@ -59,6 +59,14 @@ pub fn Array(comptime max_len: usize, comptime T: type, default: T) type {
             return ret;
         }
 
+        pub fn get_last(self: *Self) T {
+            return self.array[self.len - 1];
+        }
+
+        pub fn get_at_unsafe(self: *Self, i: usize) T {
+            return self.array[i];
+        }
+
         pub fn set(self: *Self, slice: []const T) bool {
             self.reset();
             return self.extend(slice);
