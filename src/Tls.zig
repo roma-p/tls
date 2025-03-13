@@ -24,6 +24,16 @@ tls_line: TlsLine,
 _dir_entry_slice: []const DirContent.DirEntry,
 _dir_entry_idx: usize,
 
+_state: State,
+_curr_seq_idx: usize,
+_seq_nbr: usize,
+_has_sequence: bool,
+
+const State = enum {
+    InSequence,
+    OutSequence,
+};
+
 pub fn init() Self {
     return Self {
         .dir_fs = undefined,
@@ -35,6 +45,10 @@ pub fn init() Self {
         .tls_line = TlsLine.init(),
         ._dir_entry_slice = undefined,
         ._dir_entry_idx = 0,
+        ._state = undefined,
+        ._curr_seq_idx = undefined,
+        ._seq_nbr = undefined,
+        ._has_sequence = undefined,
     };
 }
 
@@ -56,6 +70,15 @@ pub fn process(self: *Self) !void {
         self.dir_content_cur_dir.get_slice(),
         &self.sequence_info_array_cur_dir
     );
+
+    const seq_nbr = self.sequence_parser.sequence_info_array._array_seq_start_idx.len;
+    if (self.sequence_parser.sequence_info_array._array_seq_start_idx.len == 0) {
+        self._has_sequence = false;
+    } else {
+        self._has_sequence = false;
+        self._curr_seq_idx = 0;
+        self._seq_nbr = seq_nbr;
+    }
 
     self._dir_entry_slice = self.dir_content_cur_dir.get_slice();
     self._dir_entry_idx = 0;
