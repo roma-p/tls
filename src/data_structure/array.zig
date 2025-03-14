@@ -5,6 +5,7 @@ pub fn Array(comptime max_len: usize, comptime T: type, default: T) type {
         array: [max_len]T,
         len: usize,
         default: T,
+        // TODO: add "max_len"
 
         const Self = @This();
 

@@ -3,11 +3,11 @@ const fs = std.fs;
 const DirEntry = fs.Dir.Entry;
 const format_sequence = @import("tls_line/format_sequence.zig"); // TODO: rework this module
 
+const FileStat = @import("file_structure/FileStat.zig"); // TODO: rework this module
 const SequenceInfoArray = @import("sequence/SequenceInfoArray.zig");
 const SequenceParser = @import("sequence/SequenceParser.zig");
 const DirContent = @import("file_structure/DirContent.zig");
 const TlsLine = @import("tls_line/TlsLine.zig");
-const file_stat = @import("file_structure/file_stat.zig"); // TODO: rework this module
 
 const Self = @This();
 
@@ -116,7 +116,7 @@ fn _update_seq_iterator(self: *Self) void {
 
 fn _process_single_entry(self: *Self) !void {
     const entry = self._dir_entry_slice[self._dir_entry_idx];
-    const stat_refined = try file_stat.posix_stat(
+    const stat_refined = try FileStat.init(
         self.dir_fs,
         entry.name.get_slice()
     );
@@ -170,12 +170,12 @@ fn _process_single_dir(self: *Self) !void {
 fn _set_tls_line(
         self: *Self,
         entry: *const DirContent.DirEntry,
-        stat_refined: file_stat.StatRefined
+        stat_refined: FileStat,
 ) void {
     self.tls_line.permissions.set_from_mode(stat_refined.mode);
     self.tls_line.has_xattr = stat_refined.has_xattr;
     self.tls_line.size.set_from_size(stat_refined.size);
-    self.tls_line.owner.set_string(stat_refined.owner[0..stat_refined.owner_len]);
+    self.tls_line.owner.set_string(stat_refined.owner.get_slice());
     self.tls_line.date.set_from_epoch(stat_refined.mtime);
     self.tls_line.entry_name.set_string(entry.name.get_slice());
     self.tls_line.entry_kind = entry.kind;
@@ -184,7 +184,7 @@ fn _set_tls_line(
 fn _update_tls_line(
         self: *Self,
         // entry: *const DirContent.DirEntry,
-        stat_refined: file_stat.StatRefined
+        stat_refined: FileStat
 ) void {
     self.tls_line.size.update_from_size(stat_refined.mode);
 }

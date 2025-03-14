@@ -1,55 +1,52 @@
 const std = @import("std");
-const constants = @import("../constants.zig");
 const os = std.os;
 const posix = std.posix;
 const PosixStat = std.posix.Stat;
 const Dir = std.fs.Dir;
-const string = @import("../data_structure/string.zig");
+const constants = @import("../constants.zig");
+const StringShortUnicode = @import("../data_structure/string.zig").StringShortUnicode;
+
+const Self = @This();
+
+owner: StringShortUnicode,
+mode: u32,
+size: u64,
+mtime: u64,
+has_xattr: bool,
 
 const c = @cImport({
     @cInclude("sys/xattr.h");
     @cInclude("pwd.h");
 });
 
-pub const StatRefined = struct {
-    owner: [constants.MAX_STR_LEN_OWNER]u8, // TODO: use strings...
-    owner_len: usize,
-    mode: u32,
-    size: u64,
-    mtime: u64,
-    has_xattr: bool,
-};
-
-// TODO: rework this as a single module (like DateTime)
-pub fn posix_stat(dir: Dir, path: []const u8) !StatRefined {
+pub fn init(dir: Dir, path: []const u8) !Self {  // TODO: why not *Dir
     const stat = try posix.fstatat(dir.fd, path, 0); // TODO: return "unknown stat..."
     const psswd = c.getpwuid(stat.uid);
     const name_c_type: [*c]u8 = psswd.*.pw_name;
     const name_z_type = std.mem.span(@as([*:0]const u8, name_c_type));
-    // considering that the C string is null terminated.
     const mtime = stat.mtime();
-    var ret = StatRefined{
-        .owner = [_]u8{0} ** constants.MAX_STR_LEN_OWNER,
-        .owner_len = name_z_type.len,
+    var ret = Self{
+        .owner = StringShortUnicode.init(),
         .mode = stat.mode,
         .size = @bitCast(stat.size),
         .mtime = @intCast(@as(i128, mtime.tv_sec)),
         .has_xattr = false,
     };
 
+    // considering that the C string is null terminated.
     var i: usize = 0;
     while (i < constants.MAX_STR_LEN_OWNER) : (i += 1) {
         if (name_z_type[i] == 0) break;
         if (i == constants.MAX_STR_LEN_OWNER) break;
-        ret.owner[i] = name_z_type[i];
+        ret.owner.append_char(name_z_type[i]);
     }
 
-    if (try has_any_extended_attributes(path)) ret.has_xattr = true;
+    if (try _has_any_extended_attributes(path)) ret.has_xattr = true;
 
     return ret;
 }
 
-pub fn has_any_extended_attributes(path: []const u8) !bool {
+pub fn _has_any_extended_attributes(path: []const u8) !bool {
     const result = c.listxattr(
         path.ptr,
         null, // Don't retrieve actual attributes
@@ -72,6 +69,6 @@ test "file info" {
     var file = try std.fs.cwd().createFile(path, .{});
     defer file.close();
 
-    const stat = try posix_stat(std.fs.cwd(), path);
+    const stat = try Self.init(std.fs.cwd(), path);
     _ = stat;
 }
