@@ -87,7 +87,11 @@ pub fn String(comptime max_len: usize, comptime string_type: type) type {
             self._array.trim(trim_range);
         }
 
-        pub fn get_slice(self: *const Self) []const string_type {
+        pub fn get_slice(self: *const Self) []const string_type { // TODO: remove this const...
+            return self._array.get_slice();
+        }
+
+        pub fn get_slice_const(self: *const Self) []const string_type {
             return self._array.get_slice();
         }
 

@@ -91,5 +91,9 @@ pub fn Array(comptime max_len: usize, comptime T: type, default: T) type {
                 dst[i + i_dst_shift] = self.array[i];
             }
         }
+
+        pub fn print_debug(self: *const Self) void {
+            std.debug.print("{any}\n", .{self.array[0..self.len]});
+        }
     };
 }

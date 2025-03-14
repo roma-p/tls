@@ -87,10 +87,11 @@ pub fn parse_sequence(
 
     for (self.sequence_info_array._array_seq_info.get_slice(), 0..) |seq_info, k| {
         self.sequence_info_array._array_seq_start_idx.array[k] = seq_info.idx_start;
+        self.sequence_info_array._array_seq_start_idx.len += 1;
     }
     std.mem.sort(
         usize,
-        &self.sequence_info_array._array_seq_start_idx.array,
+        self.sequence_info_array._array_seq_start_idx.array[0..self.sequence_info_array._array_seq_start_idx.len],  // TODO: get_slice_mut
         {},
         comptime std.sort.asc(usize)
     );
@@ -104,7 +105,7 @@ fn _state_looking_for_sequence(self: *Self) void {
             const tmp = _build_seq_info_if_seq(
                 self._dir_entry_buff_1.name.get_slice(),
                 self._dir_entry_buff_2.name.get_slice(),
-                self._i - 1,
+                self._i - 2,
             );
             if (tmp != null) {
                 self.sequence_info_array._array_seq_info.array[self._j] = tmp.?;

@@ -74,14 +74,14 @@ pub fn print_debug(self: *Self) void {
     while (i < self.split_end) : (i += 1) {
         std.debug.print("{}-{} ", .{ self.array[i * 2], self.array[i * 2 + 1] });
     }
-    std.debug.print("\n", .{});
+    std.debug.print(" len: {d}\n", .{self.compute_len()});
 }
 
 pub fn compute_len(self: *const Self) usize {
     // TODO : test me
     var i: usize = 0;
     var j: usize = 0;
-    while (i < self.split_end / 2) : (i += 2) {
+    while (i < self.split_end) : (i += 2) {
         j += 1 + self.array[i + 1];
     }
     return j;
