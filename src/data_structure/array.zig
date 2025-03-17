@@ -5,7 +5,7 @@ pub fn Array(comptime max_len: usize, comptime T: type, default: T) type {
         array: [max_len]T,
         len: usize,
         default: T,
-        // TODO: add "max_len"
+        max_len: usize,
 
         const Self = @This();
 
@@ -14,6 +14,7 @@ pub fn Array(comptime max_len: usize, comptime T: type, default: T) type {
                 .array = [_]T{default} ** max_len,
                 .len = 0,
                 .default = default,
+                .max_len = max_len,
             };
         }
 
@@ -28,6 +29,7 @@ pub fn Array(comptime max_len: usize, comptime T: type, default: T) type {
         pub fn deinit(self: *Self) void {
             self.array = undefined;
             self.len = 0;
+            self.max_len = 0;
         }
 
         pub fn append(self: *Self, elem: T) bool {

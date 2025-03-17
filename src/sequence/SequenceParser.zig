@@ -52,8 +52,6 @@ pub fn reset(self: *Self) void {
     self._parsing_seq_state = undefined;
 }
 
-//TODO NEXT REDO WITH I / J -> copy paste algo until it rework... we clean / redo later.
-
 pub fn parse_sequence(
         self: *Self,
         dir_entry_slice: []const DirEntry,
@@ -86,19 +84,19 @@ pub fn parse_sequence(
     }
 
     if (self._parsing_seq_state == ParsingSeqState.ParsingSequence) self._j += 1;
-    self.sequence_info_array._array_seq_info.len = self._j;
+    self.sequence_info_array.array_seq_info.len = self._j;
 
-    for (self.sequence_info_array._array_seq_info.get_slice(), 0..) |seq_info, k| {
-        self.sequence_info_array._array_seq_start_idx.array[k] = seq_info.idx_start;
-        self.sequence_info_array._array_seq_start_idx.len += 1;
+    for (self.sequence_info_array.array_seq_info.get_slice(), 0..) |seq_info, k| {
+        self.sequence_info_array.array_seq_start_idx.array[k] = seq_info.idx_start;
+        self.sequence_info_array.array_seq_start_idx.len += 1;
     }
     std.mem.sort(
         usize,
-        self.sequence_info_array._array_seq_start_idx.array[0..self.sequence_info_array._array_seq_start_idx.len],  // TODO: get_slice_mut
+        self.sequence_info_array.array_seq_start_idx.array[0..self.sequence_info_array.array_seq_start_idx.len],
         {},
         comptime std.sort.asc(usize)
     );
-    self.sequence_info_array._array_seq_start_idx.len = self._j;
+    self.sequence_info_array.array_seq_start_idx.len = self._j;
 }
 
 fn _state_looking_for_sequence(self: *Self) void {
@@ -111,7 +109,7 @@ fn _state_looking_for_sequence(self: *Self) void {
                 self._i - 2,
             );
             if (tmp != null) {
-                self.sequence_info_array._array_seq_info.array[self._j] = tmp.?;
+                self.sequence_info_array.array_seq_info.array[self._j] = tmp.?;
                 self._parsing_seq_state = ParsingSeqState.ParsingSequence;
             } else {
                 self._dir_entry_buff_1 = self._dir_entry_buff_2;
@@ -126,7 +124,7 @@ fn _state_looking_for_sequence(self: *Self) void {
 
 fn _state_parsing_sequence(self: *Self) void {
     var finish_parsing_sequence = false;
-    var last = &self.sequence_info_array._array_seq_info.array[self._j];
+    var last = &self.sequence_info_array.array_seq_info.array[self._j];
     switch (self._dir_entry_curr.kind) {
         .file => {
             const seq_nb = sequence_utils.check_file_belong_to_sequence(

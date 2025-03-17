@@ -62,7 +62,7 @@ pub fn add_value(self: *Self, value: u16) void {
             return;
         }
     }
-    if (j == self.array.len) return; // TODO return err here!!!
+    if (j == self.array.len) return;
     j += 2;
     self.array[j] = value;
     self.array[j + 1] = 0;
@@ -78,22 +78,16 @@ pub fn print_debug(self: *const Self) void {
 }
 
 pub fn compute_len(self: *const Self) usize {
-    // TODO : test me
     var i: usize = 0;
     var j: usize = 0;
-    // std.debug.print("\n split end is : {d}, j is {d}\n", .{self.split_end, j});
     while (i < self.split_end * 2) : (i += 2) {
         j += 1 + self.array[i + 1];
-        // std.debug.print(
-        //     "-> i is: {d}, self.array[i] is {d}, +1 is: {d}, so j is: {d}\n",
-        //     .{i, self.array[i], self.array[i+1], j}
-        // );
     }
     return j;
 }
 
 fn _shift_right_from_idx(self: *Self, start_idx: usize, shift_increment: usize) void {
-    if (start_idx > self.array.len - 1) return; // TODO ERR?
+    if (start_idx > self.array.len - 1) return;
     var i: usize = self.split_end * 2;
     while (i >= start_idx) : (i -= 1) {
         if ((i + shift_increment) > self.array.len - 1) continue;
@@ -104,8 +98,8 @@ fn _shift_right_from_idx(self: *Self, start_idx: usize, shift_increment: usize) 
 }
 
 fn _shift_left_from_idx(self: *Self, start_idx: usize, shift_increment: usize) void {
-    if (start_idx > self.array.len - 1) return; // TODO ERR
-    if (shift_increment > self.array.len - start_idx) return; // TODO RETURN ERR?;
+    if (start_idx > self.array.len - 1) return;
+    if (shift_increment > self.array.len - start_idx) return;
     var i: usize = start_idx;
     while (i < self.split_end * 2) : (i += 1) {
         if (i < shift_increment) continue;

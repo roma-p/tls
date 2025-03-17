@@ -19,6 +19,17 @@ pub fn init() Self {
     };
 }
 
+pub fn deinit(self: *Self) void {
+    self.sequence_split.deinit();
+    self.pattern_before.deinit();
+    self.pattern_after.deinit();
+
+    self.sequence_split = undefined;
+    self.pattern_before = undefined;
+    self.pattern_after = undefined;
+    self.idx_start = undefined ;
+}
+
 pub fn print_debug(self: *const Self) void {
     std.debug.print(
         "sequence info : {s}[]{s}  / start at: {d} / ",

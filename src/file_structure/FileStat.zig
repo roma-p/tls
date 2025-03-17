@@ -19,7 +19,7 @@ const c = @cImport({
     @cInclude("pwd.h");
 });
 
-pub fn init(dir: Dir, path: []const u8) !Self {  // TODO: why not *Dir
+pub fn init(dir: *Dir, path: []const u8) !Self {
     const stat = try posix.fstatat(dir.fd, path, 0); // TODO: return "unknown stat..."
     const psswd = c.getpwuid(stat.uid);
     const name_c_type: [*c]u8 = psswd.*.pw_name;

@@ -67,7 +67,6 @@ pub fn init_from_epoch(
     string_buffer.reset();
     string_buffer.append_number(u8, date.day, 2, null);
     const day_slice = string_buffer.get_slice();
-    // TODO: copy helper... whith len...
 
     ret.day.set_string(day_slice);
 
@@ -196,7 +195,7 @@ fn set_unknown_month(self: *Self) void {
 }
 
 fn set_unknown_day(self: *Self) void {
-    self.day.set_string("?");
+    self.day.set_string(" ?");
 }
 
 fn set_unknown_hour(self: *Self) void {

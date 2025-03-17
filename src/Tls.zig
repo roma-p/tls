@@ -80,7 +80,7 @@ pub fn process(self: *Self) !void {
     self._dir_entry_idx = 0;
     self._dir_entry_slice = self.dir_content_cur_dir.get_slice();
 
-    const seq_nbr = self.sequence_parser.sequence_info_array._array_seq_start_idx.len;
+    const seq_nbr = self.sequence_parser.sequence_info_array.array_seq_start_idx.len;
     self._curr_seq_idx = 0; 
     self._state = .OutSequence;
     self._has_sequence = if(seq_nbr == 0) false else true;
@@ -158,15 +158,15 @@ fn _increment_seq_iterator(self: *Self) void {
 }
 
 fn _update_seq_start_stop(self: *Self) void {
-    self._curr_seq_start_idx = self.sequence_info_array_cur_dir._array_seq_start_idx.array[self._curr_seq_idx];
-    const seq_len = self.sequence_info_array_cur_dir._array_seq_info.array[self._curr_seq_idx].sequence_split.compute_len();
+    self._curr_seq_start_idx = self.sequence_info_array_cur_dir.array_seq_start_idx.array[self._curr_seq_idx];
+    const seq_len = self.sequence_info_array_cur_dir.array_seq_info.array[self._curr_seq_idx].sequence_split.compute_len();
     self._curr_seq_end_idx = self._curr_seq_start_idx + seq_len;
 }
 
 fn _process_single_entry(self: *Self) !void {
     const entry = self._dir_entry_slice[self._dir_entry_idx];
     const stat_refined = try FileStat.init(
-        self.dir_fs,
+        &self.dir_fs,
         entry.name.get_slice()
     );
 
@@ -230,7 +230,7 @@ fn _set_tls_line_filename_seq(
         self: *Self,
 ) void {
     self.tls_line.entry_name.reset();
-    const seq = self.sequence_info_array_cur_dir._array_seq_info.array[self._curr_seq_idx];
+    const seq = self.sequence_info_array_cur_dir.array_seq_info.array[self._curr_seq_idx];
     format_sequence.format_sequence(
         seq.pattern_before.get_slice(),
         seq.pattern_after.get_slice(),
