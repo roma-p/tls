@@ -1,8 +1,11 @@
 const std = @import("std");
+const FileKind = std.fs.File.Kind;
 const SequenceInfo = @import("SequenceInfo.zig");
 const SequenceInfoArray = @import("SequenceInfoArray.zig");
 const sequence_utils = @import("sequence_utils.zig");
-const DirEntry = @import("../file_structure/DirContent.zig").DirEntry;
+const DirContent = @import("../file_structure/DirContent.zig");
+const DirEntry = DirContent.DirEntry;
+const StringLongUnicode = @import("../data_structure/string.zig").StringLongUnicode;
 
 const Self = @This();
 
@@ -67,15 +70,15 @@ pub fn parse_sequence(
     if (dir_entry_slice.len == 0) return;  // FIXME: actually: 2! otherwise, buffer_2 can stay undefined...
 
     self._dir_entry_slice = dir_entry_slice;
+
     self._dir_entry_buff_1 = dir_entry_slice[0];
     self._dir_entry_buff_2 = undefined;
-    // self._dir_entry_buff_2 = dir_entry_slice[1];
     self._parsing_seq_state = ParsingSeqState.LookingForSequence;
 
-    // while (self._i < self._dir_entry_slice.len- 1) {
     while (self._i < self._dir_entry_slice.len) {
         self._dir_entry_curr = self._dir_entry_slice[self._i];
         self._i += 1;
+        // std.debug.print("\n {s} : {d} : {any} \n", .{self._dir_entry_curr.name.get_slice(), self._i, self._parsing_seq_state});
         switch (self._parsing_seq_state) {
             .LookingForSequence => self._state_looking_for_sequence(),
             .ParsingSequence => self._state_parsing_sequence(),
@@ -143,6 +146,7 @@ fn _state_parsing_sequence(self: *Self) void {
     }
     if (finish_parsing_sequence) {
         self._parsing_seq_state = ParsingSeqState.LookingForSequence;
+        self._state_looking_for_sequence();
         self._j += 1;
     }
 }
@@ -169,4 +173,46 @@ fn _build_seq_info_if_seq(
     ret.sequence_split.add_value(sequence_result.seq_number_filenam_2);
     ret.idx_start = i_start;
     return ret;
+}
+
+test "seq_1" {
+    var dir_content = DirContent.init();
+
+    const content_dir = [_][]const u8 {
+        "0039_1830-ani-blocking2-v001.ma",
+        "0039_1830-ani-blocking2-v002.ma",
+        "0039_1830-ani-blocking-v001.ma",
+        "0039_1830-ani-blocking-v002.ma",
+        "0039_1830-ani-blocking-v003.ma",
+        "0039_1830-ani-blocking-v004.ma",
+        "0039_1830-ani-blocking-v005.ma",
+        "0039_1830-ani-debug-v002.ma",
+        "0039_1830-ani-polish-v000.ma",
+        "0039_1830-ani-polish-v001.ma",
+        "0039_1830-ani-polish-v002.ma",
+        "0039_1830-ani-polish-v003.ma",
+        "0039_1830-ani-spline-v001.ma",
+        "0039_1830-ani-spline-v002.ma",
+        "0039_1830-ani-spline-v003.ma",
+        "debug_1.exr",
+        "debug_2.exr",
+        "maya_crash_report.json",
+    };
+
+    for (content_dir) |de| {
+        _ = dir_content.append(
+            DirEntry{
+                .name = StringLongUnicode.init_from_slice(de), 
+                .kind = .file,
+            }
+        );
+    }
+
+    var sequence_array = SequenceInfoArray.init();
+    var sequence_parser = Self.init();
+    sequence_parser.parse_sequence(dir_content.get_slice(), &sequence_array);
+    // for (sequence_array.get_slice()) |i| {
+    //     i.print_debug();
+    // }
+    //TODO: finish this test.
 }
