@@ -10,10 +10,18 @@ less_than_a_year_ago: u1,
 day: DayString,
 month: [3]u8,
 year_or_hour: [5]u8,
+ambiguous: Ambiguous,
 _now: DateTime,
 _string_buffer: string.StringShortAscii,
 
 const DayString = string.String(2, u8);
+
+const Ambiguous = enum {
+    UnknownYear,
+    UnknownMonth,
+    UnknownDay,
+    OnlyHourMayDiffer,
+};
 
 pub fn init() Self {
     return Self{
@@ -21,6 +29,7 @@ pub fn init() Self {
         .day = DayString.init(),
         .month = [_]u8{ ' ', ' ', ' ' },
         .year_or_hour = [_]u8{ ' ', ' ', ' ', ' ', ' ' },
+        .ambiguous = .OnlyHourMayDiffer,
         ._now = DateTime.init(@intCast(std.time.timestamp())),
         ._string_buffer = string.StringShortAscii.init(),
     };
@@ -31,6 +40,7 @@ pub fn reset(self: *Self) void {
     self.day.reset();
     self.month = [_]u8{ ' ', ' ', ' ' };
     self.year_or_hour = [_]u8{ ' ', ' ', ' ', ' ', ' ' };
+    self.ambiguous = .OnlyHourMayDiffer;
 }
 
 pub fn deinit(self: *Self) void {
@@ -39,6 +49,7 @@ pub fn deinit(self: *Self) void {
     self.day = undefined;
     self.month = undefined;
     self.year_or_hour = undefined;
+    self.ambiguous = undefined;
     self._now = undefined;
     self._string_buffer.deinit();
     self._string_buffer = undefined;
@@ -88,6 +99,182 @@ pub fn set_from_epoch(
     self.day = tmp.day;
     self.month = tmp.month;
     self.year_or_hour = tmp.year_or_hour;
+}
+
+pub fn _update_from_epoch(self: *Self, epoch: u64) void{
+    const other = Self.init_from_epoch(epoch, self._now, &self._string_buffer);
+    var diff_year = false;
+    if (self.less_than_a_year_ago == 1) {
+        if (other.less_than_a_year_ago == 0) {
+            diff_year = true;
+        } else {
+            var i: usize = 1;
+            while (i < 4) : (i+=1) {
+                if (!diff_year and self.year_or_hour[i] != other.year_or_hour[i]) {
+                    diff_year = true;
+                }
+                if (diff_year) {
+                    self.year_or_hour[i] = '?';
+                }
+            }
+        }
+    } 
+    if (diff_year) {
+        self.ambiguous = .UnknownYear;
+        return;
+    }
+    
+    var diff_month = false;
+    var i: usize = 0;
+    while (i < 3) : (i+=1) {
+        if (self.month[i] != other.month[i]) {
+            diff_month = true;
+            break;
+        }
+    }
+    if (diff_month) {
+        self.ambiguous = .UnknownMonth;
+        return;
+    }
+
+    var diff_day = false;
+    var j: usize = 0;
+    while(j < 2) : (j+=1) {
+        
+        if (!diff_day and self.day._array.array[j] != other.day._array.array[j]) {
+            diff_day = true;
+        }
+        if (diff_day) {
+            self.day._array.array[j] = '?';
+        }
+    }
+    if (diff_day) {
+        self.ambiguous = .UnknownDay;
+        return;
+    }
+
+    var diff_hour = false;
+    var k: usize = 0;
+    while(k < 5) : (k+=1) {
+        
+        if (!diff_hour and self.year_or_hour[k] != other.year_or_hour[k]) {
+            diff_hour = true;
+        }
+        if (diff_hour) {
+            self.year_or_hour[k] = '?';
+        }
+    }
+}
+
+pub fn update_from_epoch(self: *Self, epoch: u64) void{
+    const other = Self.init_from_epoch(epoch, self._now, &self._string_buffer);
+    var tmp = self.check_diff_year(&other);
+    if (!tmp) tmp = self.check_diff_month(&other);
+    if (!tmp) tmp = self.check_diff_day(&other);
+    if (!tmp) tmp = self.check_diff_hour(&other);
+
+    switch (self.ambiguous) {
+        .UnknownYear => {
+            self.set_unknown_month();
+            self.set_unknown_day();
+            self.set_unknown_hour();
+        }, 
+        .UnknownMonth => {
+            self.set_unknown_month();
+            self.set_unknown_day();
+            self.set_unknown_hour();
+        }, 
+        .UnknownDay => {
+            self.set_unknown_hour();
+        },
+        else => {},
+    }
+}
+
+fn set_unknown_month(self: *Self) void {
+    self.month = [_]u8{' ', ' ', '?'};
+}
+
+fn set_unknown_day(self: *Self) void {
+    self.day.set_string("?");
+}
+
+fn set_unknown_hour(self: *Self) void {
+    self.year_or_hour = [_]u8{'?', '?', ':', '?', '?'};
+}
+
+fn check_diff_year(self: *Self, other: *const Self) bool {
+    var diff_year = false;
+    if (self.less_than_a_year_ago == 1) {
+        if (other.less_than_a_year_ago == 0) {
+            diff_year = true;
+        } else {
+            var i: usize = 1;
+            while (i < 4) : (i+=1) {
+                if (!diff_year and self.year_or_hour[i] != other.year_or_hour[i]) {
+                    diff_year = true;
+                }
+                if (diff_year) {
+                    self.year_or_hour[i] = '?';
+                }
+            }
+        }
+    } 
+    if (diff_year) {
+        self.ambiguous = .UnknownYear;
+    }
+    return diff_year;
+}
+
+fn check_diff_month(self: *Self, other: *const Self) bool {
+    var diff_month = false;
+    var i: usize = 0;
+    while (i < 3) : (i+=1) {
+        if (self.month[i] != other.month[i]) {
+            diff_month = true;
+            break;
+        }
+    }
+    if (diff_month) {
+        self.ambiguous = .UnknownMonth;
+    }
+    return diff_month;
+}
+
+
+fn check_diff_day(self: *Self, other: *const Self) bool {
+    var diff_day = false;
+    var j: usize = 0;
+    while(j < 2) : (j+=1) {
+        
+        if (!diff_day and self.day._array.array[j] != other.day._array.array[j]) {
+            diff_day = true;
+        }
+        if (diff_day) {
+            self.day._array.array[j] = '?';
+        }
+    }
+    if (diff_day) {
+        self.ambiguous = .UnknownDay;
+    }
+    return diff_day;
+}
+
+fn check_diff_hour(self: *Self, other: *const Self) bool {
+    var diff_hour = false;
+    var k: usize = 0;
+    while(k < 5) : (k+=1) {
+
+        if (k == 2) continue;
+        
+        if (!diff_hour and self.year_or_hour[k] != other.year_or_hour[k]) {
+            diff_hour = true;
+        }
+        if (diff_hour) {
+            self.year_or_hour[k] = '?';
+        }
+    }
+    return diff_hour;
 }
 
 pub fn display(self: *Self, writer: *TermWriter) !void {

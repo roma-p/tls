@@ -107,6 +107,12 @@ pub fn display_sequence(self: *Self) !void {
     try self._term_writer.write(self.extra.get_slice(), TermWriter.Color.Cyan);
 }
 
+pub fn update_owner(self: *Self, other_owner: *const string.StringShortUnicode) void {
+    if (! self.owner.check_is_equal(other_owner)) {
+        self.owner.set_string("?");
+    }
+}
+
 pub fn display(self: *Self) !void {
     const term_writer_ref = &self._term_writer;
     try self.permissions.display(term_writer_ref);

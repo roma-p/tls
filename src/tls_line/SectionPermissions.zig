@@ -10,12 +10,27 @@ pub fn init() Self {
     };
 }
 
+pub fn init_from_mode(mode: u32) Self {
+    var ret = Self.init();
+    ret.set_from_mode(mode);
+    return ret;
+}
+
 pub fn reset(self: *Self) void {
     self.permissions = [_]u8{' '} ** 10;
 }
 
 pub fn deinit(self: *Self) void {
     self.permissions = undefined;
+}
+
+pub fn update_from_mode(self: *Self, other_mode: u32) void {
+    const tmp = Self.init_from_mode(other_mode);
+    for (self.permissions, 0..) |p, i| {
+        if (p != tmp.permissions[i]) {
+            self.permissions[i] = '?';
+        }
+    }
 }
 
 pub fn set_from_mode(self: *Self, mode: u32) void {
