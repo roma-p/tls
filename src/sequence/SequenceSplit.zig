@@ -69,7 +69,7 @@ pub fn add_value(self: *Self, value: u16) void {
     self.split_end += 1;
 }
 
-pub fn print_debug(self: *Self) void {
+pub fn print_debug(self: *const Self) void {
     var i: usize = 0;
     while (i < self.split_end) : (i += 1) {
         std.debug.print("{}-{} ", .{ self.array[i * 2], self.array[i * 2 + 1] });
@@ -81,8 +81,13 @@ pub fn compute_len(self: *const Self) usize {
     // TODO : test me
     var i: usize = 0;
     var j: usize = 0;
-    while (i < self.split_end) : (i += 2) {
+    // std.debug.print("\n split end is : {d}, j is {d}\n", .{self.split_end, j});
+    while (i < self.split_end * 2) : (i += 2) {
         j += 1 + self.array[i + 1];
+        // std.debug.print(
+        //     "-> i is: {d}, self.array[i] is {d}, +1 is: {d}, so j is: {d}\n",
+        //     .{i, self.array[i], self.array[i+1], j}
+        // );
     }
     return j;
 }
@@ -183,4 +188,28 @@ test "test_sequence_split_add_value" {
     sequence_split_2.add_value(5);
     try std.testing.expectEqual([_]u16{ 2, 3 }, sequence_split_2.array[0..2].*);
     try std.testing.expectEqual(1, sequence_split_2.split_end);
+}
+
+test "test_sequence_compute_len" {
+    var sequence_split = Self.init();
+    sequence_split.add_value(2);
+    sequence_split.add_value(3);
+    sequence_split.add_value(4);
+    sequence_split.add_value(5);
+    sequence_split.add_value(6);
+    sequence_split.add_value(10);
+    sequence_split.add_value(11);
+    sequence_split.add_value(12);
+    sequence_split.add_value(13);
+    sequence_split.add_value(14);
+    sequence_split.add_value(16);
+    sequence_split.add_value(18);
+    sequence_split.add_value(19);
+    sequence_split.add_value(20);
+    sequence_split.add_value(22);
+    sequence_split.add_value(23);
+    sequence_split.add_value(24);
+    sequence_split.add_value(29);
+    sequence_split.print_debug();
+    try std.testing.expectEqual(18, sequence_split.compute_len());
 }
