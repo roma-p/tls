@@ -21,6 +21,12 @@ pub fn String(comptime max_len: usize, comptime string_type: type) type {
             };
         }
 
+        pub fn init_from_slice(slice: []const string_type) Self {
+            var tmp = Self.init();
+            tmp.set_string(slice);
+            return tmp;
+        }
+
         pub fn reset(self: *Self) void {
             self._array.reset();
         }
@@ -77,6 +83,11 @@ pub fn String(comptime max_len: usize, comptime string_type: type) type {
 
         pub fn set_string(self: *Self, str: []const string_type) void {
             _ = self._array.set(str);
+        }
+
+        pub fn check_is_equal(self: *Self, other: *const Self) bool {
+            // const tmp = other._array;
+            return self._array.check_is_equal(&other._array);
         }
 
         pub fn print_debug(self: *const Self) void {

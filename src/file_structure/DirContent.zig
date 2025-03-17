@@ -43,6 +43,10 @@ pub fn deinit(self: *Self) void {
     self.dir_entry_array.deinit();
 }
 
+pub fn append(self: *Self, dir_entry: DirEntry) bool {
+    return self.dir_entry_array.append(dir_entry);
+}
+
 pub fn populate(self: *Self, dir: *const Dir) !void {
     self.reset();
 

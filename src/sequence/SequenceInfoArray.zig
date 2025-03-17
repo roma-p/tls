@@ -33,7 +33,7 @@ pub fn deinit(self: *Self) void {
     self.has_extra_file = undefined;
 }
 
-pub fn get_slice(self: *const Self) []SequenceInfo {
+pub fn get_slice(self: *const Self) []const SequenceInfo {
     return self._array_seq_info.get_slice();
 }
 

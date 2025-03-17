@@ -1,3 +1,4 @@
+const std = @import("std");
 const SequenceSplit = @import("SequenceSplit.zig");
 const string = @import("../data_structure/string.zig");
 
@@ -16,5 +17,17 @@ pub fn init() Self {
         .pattern_before = string.StringLongUnicode.init(),
         .idx_start = 0,
     };
+}
+
+pub fn print_debug(self: *const Self) void {
+    std.debug.print(
+        "sequence info : {s}[]{s}  / start at: {d} / ",
+        .{
+            self.pattern_before.get_slice(),
+            self.pattern_after.get_slice(),
+            self.idx_start,
+        }
+    );
+    self.sequence_split.print_debug();
 }
 

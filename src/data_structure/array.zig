@@ -92,6 +92,15 @@ pub fn Array(comptime max_len: usize, comptime T: type, default: T) type {
             }
         }
 
+        pub fn check_is_equal(self: *Self, other: *const Self) bool {
+            if (self.len != other.len) return false;
+            for (self.array, 0..) |elem, i| {
+                if (elem != other.array[i])
+                    return false;
+            }
+            return true;
+        }
+
         pub fn print_debug(self: *const Self) void {
             std.debug.print("{any}\n", .{self.array[0..self.len]});
         }
