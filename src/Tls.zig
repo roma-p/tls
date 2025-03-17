@@ -3,7 +3,8 @@ const fs = std.fs;
 const DirEntry = fs.Dir.Entry;
 const format_sequence = @import("tls_line/format_sequence.zig"); // TODO: rework this module
 
-const FileStat = @import("file_structure/FileStat.zig"); // TODO: rework this module
+const FileStat = @import("file_structure/FileStat.zig");
+const SequenceInfo = @import("sequence/SequenceInfo.zig");
 const SequenceInfoArray = @import("sequence/SequenceInfoArray.zig");
 const SequenceParser = @import("sequence/SequenceParser.zig");
 const DirContent = @import("file_structure/DirContent.zig");
@@ -35,7 +36,7 @@ const State = enum {
     OutSequence,
     FirstElem,
     InSequence,
-    Last,
+    LastElem,
 };
 
 pub fn init() Self {
@@ -68,7 +69,6 @@ pub fn deinit(self: *Self) void {
 }
 
 pub fn process(self: *Self) !void {
-
     self.dir_fs = try fs.cwd().openDir(".", .{ .access_sub_paths = false, .iterate = true });
 
     try self.dir_content_cur_dir.populate(&self.dir_fs);
@@ -81,64 +81,69 @@ pub fn process(self: *Self) !void {
     self._dir_entry_slice = self.dir_content_cur_dir.get_slice();
 
     const seq_nbr = self.sequence_parser.sequence_info_array._array_seq_start_idx.len;
-    self.sequence_parser.sequence_info_array._array_seq_start_idx.print_debug();
     self._curr_seq_idx = 0; 
     self._state = .OutSequence;
     self._has_sequence = if(seq_nbr == 0) false else true;
     if (self._has_sequence) {
         self._update_seq_start_stop();
-        self._state_outside_sequence();
+        if (self._is_in_sequence()) {
+            self._state = .FirstElem;
+        }
     }
 
     while (self._dir_entry_idx < self._dir_entry_slice.len) : (self._dir_entry_idx += 1) {
-        // std.debug.print("------- start ------ \n", .{});
-        std.debug.print(
-            "\n {any} seq id is : {d}, idx of dir is: {d}, start is {d}, end is {d}\n",
-            .{
-                self._state,
-                self._curr_seq_idx,
-                self._dir_entry_idx,
-                self._curr_seq_start_idx,
-                self._curr_seq_end_idx
-            }
-        );
         try self._process_single_entry();
         switch (self._state) {
-            .InSequenceFirstElem => self._state_inside_sequence_first_elem(),
-            .InSequence => self._state_inside_sequence(),
             .OutSequence => self._state_outside_sequence(),
+            .FirstElem => self._state_first_elem(),
+            .InSequence => self._state_in_sequence(),
+            .LastElem => self._state_last_elem(),
         }
     }
 }
 
 fn _state_outside_sequence(self: *Self) void {
-    if (! self._is_enterring_sequence()) return;
-    self._state = .InSequenceFirstElem;
-}
-
-fn _state_inside_sequence_first_elem(self: *Self) void {
-    self._state = .InSequence;
-    self._state_inside_sequence();
-}
-
-fn _state_inside_sequence(self: *Self) void {
-    if (self._is_leaving_sequence()) {
-        self._state = .OutSequence;
-        self._increment_seq_iterator();
-        if (self._has_sequence) {
-            self._update_seq_start_stop();
-        }
-        self._state_outside_sequence();
-    } else {
+    if (self._is_enterring_sequence()) {
+        self._state = .FirstElem;
     }
 }
 
-fn _is_enterring_sequence(self: *Self) bool {
-    return (self._dir_entry_idx == self._curr_seq_start_idx);
+fn _state_first_elem(self: *Self) void {
+    self._state = switch (self._is_leaving_sequence()){
+        true => .LastElem,
+        false => .InSequence,
+    };
 }
 
+fn _state_in_sequence(self: *Self) void {
+    if (self._is_leaving_sequence()) {
+        self._state = .LastElem;
+    }
+}
+
+fn _state_last_elem(self: *Self) void {
+    self._increment_seq_iterator();
+    self._update_seq_start_stop();
+    self._state = switch (self._is_enterring_sequence()){
+        true => .FirstElem,
+        false => .OutSequence,
+    };
+}
+
+fn _is_enterring_sequence(self: *Self) bool {
+    return (self._dir_entry_idx + 1 == self._curr_seq_start_idx);
+}
+
+fn _is_in_sequence(self: *Self) bool {
+    return (
+        self._dir_entry_idx >= self._curr_seq_start_idx and 
+        self._dir_entry_idx < self._curr_seq_end_idx
+    );
+}
+
+
 fn _is_leaving_sequence(self: *Self) bool {
-    return (self._dir_entry_idx + 1 == self._curr_seq_end_idx);
+    return (self._dir_entry_idx + 2 == self._curr_seq_end_idx);
 }
 
 fn _increment_seq_iterator(self: *Self) void {
@@ -156,8 +161,6 @@ fn _update_seq_start_stop(self: *Self) void {
     self._curr_seq_start_idx = self.sequence_info_array_cur_dir._array_seq_start_idx.array[self._curr_seq_idx];
     const seq_len = self.sequence_info_array_cur_dir._array_seq_info.array[self._curr_seq_idx].sequence_split.compute_len();
     self._curr_seq_end_idx = self._curr_seq_start_idx + seq_len;
-    self.sequence_info_array_cur_dir._array_seq_info.array[self._curr_seq_idx].pattern_before.print_debug();
-    self.sequence_info_array_cur_dir._array_seq_info.array[self._curr_seq_idx].sequence_split.print_debug();
 }
 
 fn _process_single_entry(self: *Self) !void {
@@ -169,11 +172,11 @@ fn _process_single_entry(self: *Self) !void {
 
     switch (self._state) {
         .OutSequence => self._set_tls_line(&entry, stat_refined),
-        .InSequenceFirstElem => self._set_tls_line(&entry, stat_refined),
+        .FirstElem => self._set_tls_line(&entry, stat_refined),
         .InSequence => self._update_tls_line(stat_refined),
+        .LastElem => self._update_tls_line(stat_refined),
 
     }
-
     switch (entry.kind) {
         .file => {
             self.tls_line.extra_type = TlsLine.ExtraType.None;
@@ -185,8 +188,12 @@ fn _process_single_entry(self: *Self) !void {
             self.tls_line.extra_type = TlsLine.ExtraType.None;
         },
     }
-    try self.tls_line.display();
-    self.tls_line.reset();
+
+    if (self._state == .OutSequence or self._state == .LastElem) {
+        if (self._state == .LastElem) self._set_tls_line_filename_seq();
+        try self.tls_line.display();
+        self.tls_line.reset();
+    }
 }
 
 fn _process_single_dir(self: *Self) !void {
@@ -219,6 +226,20 @@ fn _process_single_dir(self: *Self) !void {
     }
 }
 
+fn _set_tls_line_filename_seq(
+        self: *Self,
+) void {
+    self.tls_line.entry_name.reset();
+    const seq = self.sequence_info_array_cur_dir._array_seq_info.array[self._curr_seq_idx];
+    format_sequence.format_sequence(
+        seq.pattern_before.get_slice(),
+        seq.pattern_after.get_slice(),
+        &seq.sequence_split.array,
+        seq.sequence_split.split_end,
+        &self.tls_line.entry_name,
+    );
+}
+
 fn _set_tls_line(
         self: *Self,
         entry: *const DirContent.DirEntry,
@@ -235,8 +256,10 @@ fn _set_tls_line(
 
 fn _update_tls_line(
         self: *Self,
-        // entry: *const DirContent.DirEntry,
         stat_refined: FileStat
 ) void {
-    self.tls_line.size.update_from_size(stat_refined.mode);
+    self.tls_line.size.update_from_size(stat_refined.size);
+    self.tls_line.update_owner(&stat_refined.owner);
+    self.tls_line.permissions.update_from_mode(stat_refined.mode);
+    self.tls_line.date.update_from_epoch(stat_refined.mtime);
 }
