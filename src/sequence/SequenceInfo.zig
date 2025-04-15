@@ -27,18 +27,14 @@ pub fn deinit(self: *Self) void {
     self.sequence_split = undefined;
     self.pattern_before = undefined;
     self.pattern_after = undefined;
-    self.idx_start = undefined ;
+    self.idx_start = undefined;
 }
 
 pub fn print_debug(self: *const Self) void {
-    std.debug.print(
-        "sequence info : {s}[]{s}  / start at: {d} / ",
-        .{
-            self.pattern_before.get_slice(),
-            self.pattern_after.get_slice(),
-            self.idx_start,
-        }
-    );
+    std.debug.print("sequence info : {s}[]{s}  / start at: {d} / ", .{
+        self.pattern_before.get_slice(),
+        self.pattern_after.get_slice(),
+        self.idx_start,
+    });
     self.sequence_split.print_debug();
 }
-
