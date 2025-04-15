@@ -24,6 +24,7 @@ extra_type: ExtraType,
 
 _string_buffer: string.StringShortAscii,
 _term_writer: TermWriter,
+_max_owner_len: usize,
 
 pub const ExtraType = enum {
     None,
@@ -44,6 +45,7 @@ pub fn init() Self {
         .extra_type = undefined,
         ._string_buffer = string.StringShortAscii.init(),
         ._term_writer = TermWriter.init(),
+        ._max_owner_len = 0,
     };
 }
 
@@ -80,9 +82,17 @@ pub fn deinit(self: *Self) void {
     self.extra.deinit();
     self.extra = undefined;
     self.extra_type = undefined;
+    self._max_owner_len = 0;
 }
 
 pub fn display_owner(self: *Self) !void {
+    if (self._max_owner_len > self.owner._array.len) {
+        var i: usize = 0;
+        const max_padding = self._max_owner_len - self.owner._array.len;
+        while (i < max_padding) : (i += 1) {
+            self.owner.append_char(' ');
+        }
+    }
     try self._term_writer.write(self.owner.get_slice(), TermWriter.Color.Yellow);
 }
 
@@ -108,7 +118,7 @@ pub fn display_sequence(self: *Self) !void {
 }
 
 pub fn update_owner(self: *Self, other_owner: *const string.StringShortUnicode) void {
-    if (! self.owner.check_is_equal(other_owner)) {
+    if (!self.owner.check_is_equal(other_owner)) {
         self.owner.set_string("?");
     }
 }

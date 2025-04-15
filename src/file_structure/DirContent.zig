@@ -2,6 +2,7 @@ const std = @import("std");
 const constants = @import("../constants.zig");
 const string = @import("../data_structure/string.zig");
 const Array = @import("../data_structure/array.zig").Array;
+const FileStat = @import("FileStat.zig");
 
 const fs = std.fs;
 const Dir = fs.Dir;
@@ -11,6 +12,8 @@ const StringLongUnicode = string.StringLongUnicode;
 const Self = @This();
 
 dir_entry_array: DirEntryArray,
+file_stat_array: FileStatArray,
+max_owner_len: usize,
 
 pub const DirEntry = struct {
     name: StringLongUnicode,
@@ -28,26 +31,35 @@ const DirEntryArray = Array(
     default_dir_entry,
 );
 
+const FileStatArray = Array(constants.MAX_FILE_IN_DIR, FileStat, undefined);
+
 pub fn init() Self {
     return Self{
         .dir_entry_array = DirEntryArray.init(),
+        .file_stat_array = FileStatArray.init(),
+        .max_owner_len = 0,
     };
 }
 
 pub fn reset(self: *Self) void {
     self.dir_entry_array.set_to_default();
     self.dir_entry_array.reset();
+    self.file_stat_array.set_to_default();
+    self.file_stat_array.reset();
+    self.max_owner_len = 0;
 }
 
 pub fn deinit(self: *Self) void {
     self.dir_entry_array.deinit();
+    self.file_stat_array.deinit();
+    self.max_owner_len = 0;
 }
 
 pub fn append(self: *Self, dir_entry: DirEntry) bool {
     return self.dir_entry_array.append(dir_entry);
 }
 
-pub fn populate(self: *Self, dir: *const Dir) !void {
+pub fn populate(self: *Self, dir: *Dir, eval_file_stat: bool) !void {
     self.reset();
 
     var walker = dir.iterate();
@@ -63,6 +75,17 @@ pub fn populate(self: *Self, dir: *const Dir) !void {
     self.dir_entry_array.len = i;
 
     walker = undefined;
+
+    if (!eval_file_stat) return;
+
+    for (self.dir_entry_array.get_slice()) |c| {
+        const file_stat = try FileStat.init(dir, c.name.get_slice());
+        _ = self.file_stat_array.append(file_stat);
+        const owner_len = file_stat.owner._array.len;
+        if (owner_len > self.max_owner_len) {
+            self.max_owner_len = owner_len;
+        }
+    }
 }
 
 pub fn get_slice(self: *Self) []const DirEntry {
