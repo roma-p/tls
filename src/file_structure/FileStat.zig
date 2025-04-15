@@ -29,7 +29,7 @@ pub fn init(dir: *Dir, path: []const u8) !Self {
         .owner = StringShortUnicode.init(),
         .mode = stat.mode,
         .size = @bitCast(stat.size),
-        .mtime = @intCast(@as(i128, mtime.tv_sec)),
+        .mtime = @intCast(@as(i128, mtime.sec)),
         .has_xattr = false,
     };
 
@@ -51,7 +51,7 @@ pub fn _has_any_extended_attributes(path: []const u8) !bool {
         path.ptr,
         null, // Don't retrieve actual attributes
         0, // Get required buffer size
-        // 0, // options flags.
+        0, // options flags.
     );
 
     if (result > 0) {
