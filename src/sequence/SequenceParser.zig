@@ -12,8 +12,8 @@ const Self = @This();
 sequence_info_array: *SequenceInfoArray,
 
 _dir_entry_slice: []const DirEntry,
-_dir_entry_buff_1: DirEntry,  // TODO: make this pointer.
-_dir_entry_buff_2: DirEntry,  // TODO: make this pointer.
+_dir_entry_buff_1: DirEntry, // TODO: make this pointer.
+_dir_entry_buff_2: DirEntry, // TODO: make this pointer.
 _dir_entry_curr: DirEntry,
 _i: usize, // use for dir_entry_slice
 _j: usize, // use for sequence_info_array.array
@@ -53,10 +53,9 @@ pub fn reset(self: *Self) void {
 }
 
 pub fn parse_sequence(
-        self: *Self,
-        dir_entry_slice: []const DirEntry,
-        sequence_info_array: *SequenceInfoArray,
-
+    self: *Self,
+    dir_entry_slice: []const DirEntry,
+    sequence_info_array: *SequenceInfoArray,
 ) void {
     self.reset();
     self.sequence_info_array = sequence_info_array;
@@ -65,7 +64,7 @@ pub fn parse_sequence(
     self._i = 1;
     self._j = 0;
 
-    if (dir_entry_slice.len == 0) return;  // FIXME: actually: 2! otherwise, buffer_2 can stay undefined...
+    if (dir_entry_slice.len == 0) return; // FIXME: actually: 2! otherwise, buffer_2 can stay undefined...
 
     self._dir_entry_slice = dir_entry_slice;
 
@@ -94,7 +93,7 @@ pub fn parse_sequence(
         usize,
         self.sequence_info_array.array_seq_start_idx.array[0..self.sequence_info_array.array_seq_start_idx.len],
         {},
-        comptime std.sort.asc(usize)
+        comptime std.sort.asc(usize),
     );
     self.sequence_info_array.array_seq_start_idx.len = self._j;
 }
@@ -176,7 +175,7 @@ fn _build_seq_info_if_seq(
 test "seq_1" {
     var dir_content = DirContent.init();
 
-    const content_dir = [_][]const u8 {
+    const content_dir = [_][]const u8{
         "0039_1830-ani-blocking2-v001.ma",
         "0039_1830-ani-blocking2-v002.ma",
         "0039_1830-ani-blocking-v001.ma",
@@ -198,12 +197,10 @@ test "seq_1" {
     };
 
     for (content_dir) |de| {
-        _ = dir_content.append(
-            DirEntry{
-                .name = StringLongUnicode.init_from_slice(de), 
-                .kind = .file,
-            }
-        );
+        _ = dir_content.append(DirEntry{
+            .name = StringLongUnicode.init_from_slice(de),
+            .kind = .file,
+        });
     }
 
     var sequence_array = SequenceInfoArray.init();
