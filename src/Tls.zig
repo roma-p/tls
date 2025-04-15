@@ -22,6 +22,7 @@ sequence_info_array_sub_dir: SequenceInfoArray,
 
 tls_line: TlsLine,
 
+_f_stat_slice: []const FileStat,
 _dir_entry_slice: []const DirContent.DirEntry,
 _dir_entry_idx: usize,
 
@@ -40,7 +41,7 @@ const State = enum {
 };
 
 pub fn init() Self {
-    return Self {
+    return Self{
         .dir_fs = undefined,
         .dir_content_cur_dir = DirContent.init(),
         .dir_content_sub_dir = DirContent.init(),
@@ -48,6 +49,7 @@ pub fn init() Self {
         .sequence_info_array_cur_dir = SequenceInfoArray.init(),
         .sequence_info_array_sub_dir = SequenceInfoArray.init(),
         .tls_line = TlsLine.init(),
+        ._f_stat_slice = undefined,
         ._dir_entry_slice = undefined,
         ._dir_entry_idx = undefined,
         ._state = undefined,
@@ -71,19 +73,18 @@ pub fn deinit(self: *Self) void {
 pub fn process(self: *Self) !void {
     self.dir_fs = try fs.cwd().openDir(".", .{ .access_sub_paths = false, .iterate = true });
 
-    try self.dir_content_cur_dir.populate(&self.dir_fs);
-    self.sequence_parser.parse_sequence(
-        self.dir_content_cur_dir.get_slice(),
-        &self.sequence_info_array_cur_dir
-    );
+    try self.dir_content_cur_dir.populate(&self.dir_fs, true);
+    self.tls_line._max_owner_len = self.dir_content_cur_dir.max_owner_len;
+    self.sequence_parser.parse_sequence(self.dir_content_cur_dir.get_slice(), &self.sequence_info_array_cur_dir);
 
     self._dir_entry_idx = 0;
     self._dir_entry_slice = self.dir_content_cur_dir.get_slice();
+    self._f_stat_slice = self.dir_content_cur_dir.file_stat_array.get_slice();
 
     const seq_nbr = self.sequence_parser.sequence_info_array.array_seq_start_idx.len;
-    self._curr_seq_idx = 0; 
+    self._curr_seq_idx = 0;
     self._state = .OutSequence;
-    self._has_sequence = if(seq_nbr == 0) false else true;
+    self._has_sequence = if (seq_nbr == 0) false else true;
     if (self._has_sequence) {
         self._update_seq_start_stop();
         if (self._is_in_sequence()) {
@@ -109,7 +110,7 @@ fn _state_outside_sequence(self: *Self) void {
 }
 
 fn _state_first_elem(self: *Self) void {
-    self._state = switch (self._is_leaving_sequence()){
+    self._state = switch (self._is_leaving_sequence()) {
         true => .LastElem,
         false => .InSequence,
     };
@@ -124,7 +125,7 @@ fn _state_in_sequence(self: *Self) void {
 fn _state_last_elem(self: *Self) void {
     self._increment_seq_iterator();
     self._update_seq_start_stop();
-    self._state = switch (self._is_enterring_sequence()){
+    self._state = switch (self._is_enterring_sequence()) {
         true => .FirstElem,
         false => .OutSequence,
     };
@@ -135,22 +136,18 @@ fn _is_enterring_sequence(self: *Self) bool {
 }
 
 fn _is_in_sequence(self: *Self) bool {
-    return (
-        self._dir_entry_idx >= self._curr_seq_start_idx and 
-        self._dir_entry_idx < self._curr_seq_end_idx
-    );
+    return (self._dir_entry_idx >= self._curr_seq_start_idx and
+        self._dir_entry_idx < self._curr_seq_end_idx);
 }
-
 
 fn _is_leaving_sequence(self: *Self) bool {
     return (self._dir_entry_idx + 2 == self._curr_seq_end_idx);
 }
 
 fn _increment_seq_iterator(self: *Self) void {
-    if (! self._has_sequence) {
+    if (!self._has_sequence) {
         return;
-    }
-    else if (self._curr_seq_idx + 1 == self._seq_nbr) {
+    } else if (self._curr_seq_idx + 1 == self._seq_nbr) {
         self._has_sequence = false;
     } else {
         self._curr_seq_idx += 1;
@@ -165,17 +162,13 @@ fn _update_seq_start_stop(self: *Self) void {
 
 fn _process_single_entry(self: *Self) !void {
     const entry = self._dir_entry_slice[self._dir_entry_idx];
-    const stat_refined = try FileStat.init(
-        &self.dir_fs,
-        entry.name.get_slice()
-    );
+    const fstat = self._f_stat_slice[self._dir_entry_idx];
 
     switch (self._state) {
-        .OutSequence => self._set_tls_line(&entry, stat_refined),
-        .FirstElem => self._set_tls_line(&entry, stat_refined),
-        .InSequence => self._update_tls_line(stat_refined),
-        .LastElem => self._update_tls_line(stat_refined),
-
+        .OutSequence => self._set_tls_line(&entry, fstat),
+        .FirstElem => self._set_tls_line(&entry, fstat),
+        .InSequence => self._update_tls_line(fstat),
+        .LastElem => self._update_tls_line(fstat),
     }
     switch (entry.kind) {
         .file => {
@@ -198,14 +191,11 @@ fn _process_single_entry(self: *Self) !void {
 
 fn _process_single_dir(self: *Self) !void {
     const entry = self._dir_entry_slice[self._dir_entry_idx];
-    const d = try self.dir_fs.openDir(
-        entry.name.get_slice(),
-        .{ .no_follow = false, .iterate = true }
-    );
+    var d = try self.dir_fs.openDir(entry.name.get_slice(), .{ .no_follow = false, .iterate = true });
 
-    try self.dir_content_sub_dir.populate(&d);
+    try self.dir_content_sub_dir.populate(&d, false);
     self.sequence_parser.parse_sequence(
-        self.dir_content_sub_dir.get_slice(), 
+        self.dir_content_sub_dir.get_slice(),
         &self.sequence_info_array_sub_dir,
     );
 
@@ -227,7 +217,7 @@ fn _process_single_dir(self: *Self) !void {
 }
 
 fn _set_tls_line_filename_seq(
-        self: *Self,
+    self: *Self,
 ) void {
     self.tls_line.entry_name.reset();
     const seq = self.sequence_info_array_cur_dir.array_seq_info.array[self._curr_seq_idx];
@@ -241,9 +231,9 @@ fn _set_tls_line_filename_seq(
 }
 
 fn _set_tls_line(
-        self: *Self,
-        entry: *const DirContent.DirEntry,
-        stat_refined: FileStat,
+    self: *Self,
+    entry: *const DirContent.DirEntry,
+    stat_refined: FileStat,
 ) void {
     self.tls_line.permissions.set_from_mode(stat_refined.mode);
     self.tls_line.has_xattr = stat_refined.has_xattr;
@@ -254,10 +244,7 @@ fn _set_tls_line(
     self.tls_line.entry_kind = entry.kind;
 }
 
-fn _update_tls_line(
-        self: *Self,
-        stat_refined: FileStat
-) void {
+fn _update_tls_line(self: *Self, stat_refined: FileStat) void {
     self.tls_line.size.update_from_size(stat_refined.size);
     self.tls_line.update_owner(&stat_refined.owner);
     self.tls_line.permissions.update_from_mode(stat_refined.mode);

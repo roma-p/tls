@@ -16,7 +16,6 @@ pub const Color = enum(u8) {
     White = '7',
 };
 
-
 pub fn init() Self {
     return Self{
         ._writer = std.io.getStdOut().writer(),
@@ -27,7 +26,7 @@ pub fn deinit(self: *Self) void {
     self._writer = undefined;
 }
 
-pub fn write(self: *Self, str: []const u8, color: ?Color) !void{
+pub fn write(self: *Self, str: []const u8, color: ?Color) !void {
     if (color == null) {
         _ = try self._writer.write(str);
     } else {
