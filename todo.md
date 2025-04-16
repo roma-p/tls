@@ -19,6 +19,7 @@
 
 ## Missing Features.
 
+- [ ] ls non current dir.
 - [ ] display sim links
 - [ ] display multiple seq.
 - [ ] display extra files.

@@ -191,7 +191,12 @@ fn _process_single_entry(self: *Self) !void {
 
 fn _process_single_dir(self: *Self) !void {
     const entry = self._dir_entry_slice[self._dir_entry_idx];
-    var d = try self.dir_fs.openDir(entry.name.get_slice(), .{ .no_follow = false, .iterate = true });
+    var d = self.dir_fs.openDir(
+        entry.name.get_slice(),
+        .{ .no_follow = false, .iterate = true },
+    ) catch {
+        return;
+    };
 
     try self.dir_content_sub_dir.populate(&d, false);
     self.sequence_parser.parse_sequence(
