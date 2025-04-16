@@ -86,7 +86,7 @@ pub fn init_from_size(number: u64) Self {
         .size = ret,
         .size_char = c,
         .buffer_string = undefined,
-        .ambiguous =  .Identical,
+        .ambiguous = .Identical,
     };
 }
 
@@ -116,12 +116,10 @@ pub fn display(self: *Self, writer: *TermWriter) !void {
     if (is_size_to_print) {
         if (self.ambiguous == .Different) {
             self.buffer_string.append_string("     ?");
-        } 
-        else if (self.size_indicator == 0) {
+        } else if (self.size_indicator == 0) {
             if (self.ambiguous == .SameChar) {
                 self.buffer_string.append_string("     ?");
-            }
-            else {
+            } else {
                 self.buffer_string.append_number(f32, self.size, 6, null);
             }
         } else if (self.size_indicator == 1) {

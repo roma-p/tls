@@ -117,6 +117,17 @@ pub fn display_sequence(self: *Self) !void {
     try self._term_writer.write(self.extra.get_slice(), TermWriter.Color.Cyan);
 }
 
+pub fn display_size(self: *Self) !void {
+    switch (self.entry_kind) {
+        .directory => {
+            try self._term_writer.write("     -", null);
+        },
+        else => {
+            try self.size.display(&self._term_writer);
+        },
+    }
+}
+
 pub fn update_owner(self: *Self, other_owner: *const string.StringShortUnicode) void {
     if (!self.owner.check_is_equal(other_owner)) {
         self.owner.set_string("?");
@@ -128,7 +139,7 @@ pub fn display(self: *Self) !void {
     try self.permissions.display(term_writer_ref);
     try self.display_xtattr();
     try self._term_writer.write(" ", null);
-    try self.size.display(term_writer_ref);
+    try self.display_size();
     try self._term_writer.write(" ", null);
     try self.display_owner();
     try self._term_writer.write(" ", null);
