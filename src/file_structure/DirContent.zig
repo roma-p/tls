@@ -1,5 +1,4 @@
 const std = @import("std");
-const constants = @import("../constants.zig");
 const string = @import("../data_structure/string.zig");
 const Array = @import("../data_structure/array.zig").Array;
 const FileStat = @import("FileStat.zig");
@@ -10,6 +9,8 @@ const FileKind = fs.File.Kind;
 const StringLongUnicode = string.StringLongUnicode;
 
 const Self = @This();
+
+pub const MAX_FILE_IN_DIR = 1024;
 
 dir_entry_array: DirEntryArray,
 file_stat_array: FileStatArray,
@@ -26,12 +27,12 @@ const default_dir_entry = DirEntry{
 };
 
 const DirEntryArray = Array(
-    constants.MAX_FILE_IN_DIR,
+    MAX_FILE_IN_DIR,
     DirEntry,
     default_dir_entry,
 );
 
-const FileStatArray = Array(constants.MAX_FILE_IN_DIR, FileStat, undefined);
+const FileStatArray = Array(MAX_FILE_IN_DIR, FileStat, undefined);
 
 pub fn init() Self {
     return Self{
@@ -66,7 +67,7 @@ pub fn populate(self: *Self, dir: *Dir, eval_file_stat: bool) !void {
     var i: usize = 0;
 
     while (try walker.next()) |entry| {
-        if (i >= constants.MAX_FILE_IN_DIR) break; // overflow.
+        if (i >= MAX_FILE_IN_DIR) break; // overflow.
         self.dir_entry_array.array[i].kind = entry.kind;
         self.dir_entry_array.array[i].name.append_string(entry.name);
         i += 1;

@@ -35,9 +35,10 @@ pub fn init(dir: *Dir, path: []const u8) !Self {
 
     // considering that the C string is null terminated.
     var i: usize = 0;
-    while (i < constants.MAX_STR_LEN_OWNER) : (i += 1) {
+    const max_len = ret.owner.get_max_len();
+    while (i < max_len) : (i += 1) {
         if (name_z_type[i] == 0) break;
-        if (i == constants.MAX_STR_LEN_OWNER) break;
+        if (i == max_len) break;
         ret.owner.append_char(name_z_type[i]);
     }
 

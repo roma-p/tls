@@ -1,11 +1,13 @@
 const std = @import("std");
-const constants = @import("../constants.zig"); // delme
 const Array = @import("array.zig").Array;
 
+pub const MAX_STR_LEN_ENTRY = 256;
+pub const MAX_STR_LEN_OWNER = 50;
+
 // not yet unicode...
-pub const StringLongUnicode = String(constants.MAX_STR_LEN_ENTRY, u8);
-pub const StringShortUnicode = String(constants.MAX_STR_LEN_OWNER, u8);
-pub const StringShortAscii = String(constants.MAX_STR_LEN_OWNER, u8);
+pub const StringLongUnicode = String(MAX_STR_LEN_ENTRY, u8);
+pub const StringShortUnicode = String(MAX_STR_LEN_OWNER, u8);
+pub const StringShortAscii = String(MAX_STR_LEN_OWNER, u8);
 
 pub fn String(comptime max_len: usize, comptime string_type: type) type {
     return struct {
@@ -33,6 +35,14 @@ pub fn String(comptime max_len: usize, comptime string_type: type) type {
 
         pub fn deinit(self: *Self) void {
             self._array.deinit();
+        }
+
+        pub fn get_len(self: *Self) usize {
+            return self._array.len;
+        }
+
+        pub fn get_max_len(self: *Self) usize {
+            return self._array.max_len;
         }
 
         pub fn append_char(self: *Self, char: string_type) void {
