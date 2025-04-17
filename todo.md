@@ -3,7 +3,7 @@
 
 ## Code Reorg
 
-- [ ] compile for zig 0.14? 
+- [X] compile for zig 0.14? 
 - [ ] profile, make it faster.
 - [ ] change to utf8
 - [ ] check lifecycle of every entity (do i deinit?)
@@ -15,14 +15,16 @@
 
 - [ ] hours is not correct.
 - [ ] extra attributes not display anymore.
-- [ ] directory shant print size.
+- [X] directory shant print size.
 
 ## Missing Features.
 
-- [ ] ls non current dir.
-- [ ] display sim links
-- [ ] display multiple seq.
+- [X] ls non current dir.
+- [X] display multiple seq.
+- [ ] sequence of directories.
+- [ ] symlinks
 - [ ] display extra files.
-- [ ] alignement of colomns.
-    - [ ] aligns users.
+- [.] alignement of colomns.
+    - [X] aligns users.
+    - [ ] align to minimum size to win spaces...
     - [ ] for extra: do I align? if multiple seq yes, but only aligns with size of those.
