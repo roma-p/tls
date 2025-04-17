@@ -1,4 +1,5 @@
 const std = @import("std");
+const ParseIntError = std.fmt.ParseIntError;
 const fs = std.fs;
 
 pub const ResultCheckIsSequenceUsingTwoFilenames = struct {
@@ -44,8 +45,10 @@ pub fn check_is_sequence_using_two_filenames(
             if (!std.mem.eql(u8, slice_1, slice_2)) return null;
         } else {
             if (!std.mem.eql(u8, slice_1, slice_2)) {
-                const nbr_1 = std.fmt.parseInt(u16, slice_1, 10) catch unreachable;
-                const nbr_2 = std.fmt.parseInt(u16, slice_2, 10) catch unreachable;
+                const nbr_1 = _cast_to_int(slice_1) orelse return null;
+                const nbr_2 = _cast_to_int(slice_2) orelse return null;
+                // const nbr_1 = std.fmt.parseInt(u16, slice_1, 10) catch return null;
+                // const nbr_2 = std.fmt.parseInt(u16, slice_2, 10) catch return null;
 
                 if (nbr_1 != nbr_2) {
                     if (diff_number_found) {
@@ -130,6 +133,16 @@ fn _split_filename_at_numbers(filename: []const u8) struct { [50]usize, usize } 
     ret[ret_i] = filename.len;
     ret_i += 1;
     return .{ ret, ret_i };
+}
+
+fn _cast_to_int(slice: []const u8) ?u16 {
+    return std.fmt.parseInt(u16, slice, 10) catch |e| {
+        switch (e) {
+            ParseIntError.Overflow => return null,
+            else => unreachable,
+
+        }
+    };
 }
 
 ///////////////////////////////////////////////////////////////////////////////
