@@ -70,8 +70,8 @@ pub fn deinit(self: *Self) void {
     self.tls_line.deinit();
 }
 
-pub fn process(self: *Self) !void {
-    self.dir_fs = try fs.cwd().openDir(".", .{ .access_sub_paths = false, .iterate = true });
+pub fn process(self: *Self, path: []const u8) !void {
+    self.dir_fs = try fs.cwd().openDir(path, .{ .access_sub_paths = false, .iterate = true });
 
     try self.dir_content_cur_dir.populate(&self.dir_fs, true);
     self.tls_line._max_owner_len = self.dir_content_cur_dir.max_owner_len;
