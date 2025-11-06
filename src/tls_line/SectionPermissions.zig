@@ -73,6 +73,6 @@ pub fn display(self: *Self, writer: *TermWriter) !void {
             'd' => .Blue,
             else => .White,
         };
-        _ = try writer.write(r, color);
+        writer.append_to_buffer_line(r, color);
     }
 }

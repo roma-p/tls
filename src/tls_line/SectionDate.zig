@@ -100,7 +100,7 @@ pub fn set_from_epoch(
     self.year_or_hour = tmp.year_or_hour;
 }
 
-pub fn update_from_epoch(self: *Self, epoch: u64) void{
+pub fn update_from_epoch(self: *Self, epoch: u64) void {
     const other = Self.init_from_epoch(epoch, self._now, &self._string_buffer);
     var tmp = self.check_diff_year(&other);
     if (!tmp) tmp = self.check_diff_month(&other);
@@ -112,12 +112,12 @@ pub fn update_from_epoch(self: *Self, epoch: u64) void{
             self.set_unknown_month();
             self.set_unknown_day();
             self.set_unknown_hour();
-        }, 
+        },
         .UnknownMonth => {
             self.set_unknown_month();
             self.set_unknown_day();
             self.set_unknown_hour();
-        }, 
+        },
         .UnknownDay => {
             self.set_unknown_hour();
         },
@@ -126,7 +126,7 @@ pub fn update_from_epoch(self: *Self, epoch: u64) void{
 }
 
 fn set_unknown_month(self: *Self) void {
-    self.month = [_]u8{' ', ' ', '?'};
+    self.month = [_]u8{ ' ', ' ', '?' };
 }
 
 fn set_unknown_day(self: *Self) void {
@@ -134,7 +134,7 @@ fn set_unknown_day(self: *Self) void {
 }
 
 fn set_unknown_hour(self: *Self) void {
-    self.year_or_hour = [_]u8{'?', '?', ':', '?', '?'};
+    self.year_or_hour = [_]u8{ '?', '?', ':', '?', '?' };
 }
 
 fn check_diff_year(self: *Self, other: *const Self) bool {
@@ -144,7 +144,7 @@ fn check_diff_year(self: *Self, other: *const Self) bool {
             diff_year = true;
         } else {
             var i: usize = 1;
-            while (i < 4) : (i+=1) {
+            while (i < 4) : (i += 1) {
                 if (!diff_year and self.year_or_hour[i] != other.year_or_hour[i]) {
                     diff_year = true;
                 }
@@ -153,7 +153,7 @@ fn check_diff_year(self: *Self, other: *const Self) bool {
                 }
             }
         }
-    } 
+    }
     if (diff_year) {
         self.ambiguous = .UnknownYear;
     }
@@ -163,7 +163,7 @@ fn check_diff_year(self: *Self, other: *const Self) bool {
 fn check_diff_month(self: *Self, other: *const Self) bool {
     var diff_month = false;
     var i: usize = 0;
-    while (i < 3) : (i+=1) {
+    while (i < 3) : (i += 1) {
         if (self.month[i] != other.month[i]) {
             diff_month = true;
             break;
@@ -175,12 +175,10 @@ fn check_diff_month(self: *Self, other: *const Self) bool {
     return diff_month;
 }
 
-
 fn check_diff_day(self: *Self, other: *const Self) bool {
     var diff_day = false;
     var j: usize = 0;
-    while(j < 2) : (j+=1) {
-        
+    while (j < 2) : (j += 1) {
         if (!diff_day and self.day._array.array[j] != other.day._array.array[j]) {
             diff_day = true;
         }
@@ -197,10 +195,9 @@ fn check_diff_day(self: *Self, other: *const Self) bool {
 fn check_diff_hour(self: *Self, other: *const Self) bool {
     var diff_hour = false;
     var k: usize = 0;
-    while(k < 5) : (k+=1) {
-
+    while (k < 5) : (k += 1) {
         if (k == 2) continue;
-        
+
         if (!diff_hour and self.year_or_hour[k] != other.year_or_hour[k]) {
             diff_hour = true;
         }
@@ -213,11 +210,11 @@ fn check_diff_hour(self: *Self, other: *const Self) bool {
 
 pub fn display(self: *Self, writer: *TermWriter) !void {
     const c = TermWriter.Color.Blue;
-    try writer.write(self.day.get_slice(), c);
-    try writer.write(" ", null);
-    try writer.write(&self.month, c);
-    try writer.write(" ", null);
-    try writer.write(&self.year_or_hour, c);
+    writer.append_to_buffer_line(self.day.get_slice(), c);
+    writer.append_to_buffer_line(" ", null);
+    writer.append_to_buffer_line(&self.month, c);
+    writer.append_to_buffer_line(" ", null);
+    writer.append_to_buffer_line(&self.year_or_hour, c);
 }
 
 fn _is_date_older_by_a_year(now: DateTime, date: DateTime) bool {
@@ -249,4 +246,3 @@ fn _conv_mont_id_to_trigram(month_id: u8) []const u8 {
         else => "Dec", // FIXME: handle err here?
     };
 }
-

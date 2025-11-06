@@ -135,5 +135,5 @@ pub fn display(self: *Self, writer: *TermWriter) !void {
     } else {
         self.buffer_string.append_string("     -");
     }
-    try writer.write(self.buffer_string.get_slice(), TermWriter.Color.Green);
+    writer.append_to_buffer_line(self.buffer_string.get_slice(), TermWriter.Color.Green);
 }

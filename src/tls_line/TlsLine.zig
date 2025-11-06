@@ -93,14 +93,14 @@ pub fn display_owner(self: *Self) !void {
             self.owner.append_char(' ');
         }
     }
-    try self._term_writer.write(self.owner.get_slice(), TermWriter.Color.Yellow);
+    self._term_writer.append_to_buffer_line(self.owner.get_slice(), TermWriter.Color.Yellow);
 }
 
 pub fn display_xtattr(self: *Self) !void {
     if (self.has_xattr) {
-        _ = try self._term_writer.write("@", TermWriter.Color.Green);
+        self._term_writer.append_to_buffer_line("@", TermWriter.Color.Green);
     } else {
-        _ = try self._term_writer.write(" ", null);
+        self._term_writer.append_to_buffer_line(" ", null);
     }
 }
 
@@ -109,18 +109,18 @@ pub fn display_entry_name(self: *Self) !void {
         .directory => .Blue,
         else => .White,
     };
-    try self._term_writer.write(self.entry_name.get_slice(), c);
+    self._term_writer.append_to_buffer_line(self.entry_name.get_slice(), c);
 }
 
 pub fn display_sequence(self: *Self) !void {
-    try self._term_writer.write(" :: ", TermWriter.Color.White);
-    try self._term_writer.write(self.extra.get_slice(), TermWriter.Color.Cyan);
+    self._term_writer.append_to_buffer_line(" :: ", TermWriter.Color.White);
+    self._term_writer.append_to_buffer_line(self.extra.get_slice(), TermWriter.Color.Cyan);
 }
 
 pub fn display_size(self: *Self) !void {
     switch (self.entry_kind) {
         .directory => {
-            try self._term_writer.write("     -", null);
+            self._term_writer.append_to_buffer_line("     -", null);
         },
         else => {
             try self.size.display(&self._term_writer);
@@ -138,13 +138,13 @@ pub fn display(self: *Self) !void {
     const term_writer_ref = &self._term_writer;
     try self.permissions.display(term_writer_ref);
     try self.display_xtattr();
-    try self._term_writer.write(" ", null);
+    self._term_writer.append_to_buffer_line(" ", null);
     try self.display_size();
-    try self._term_writer.write(" ", null);
+    self._term_writer.append_to_buffer_line(" ", null);
     try self.display_owner();
-    try self._term_writer.write(" ", null);
+    self._term_writer.append_to_buffer_line(" ", null);
     try self.date.display(term_writer_ref);
-    try self._term_writer.write(" ", null);
+    self._term_writer.append_to_buffer_line(" ", null);
     try self.display_entry_name();
 
     switch (self.extra_type) {
@@ -152,5 +152,7 @@ pub fn display(self: *Self) !void {
         .Symlink => unreachable,
         .Sequence => try self.display_sequence(),
     }
-    try self._term_writer.write("\n", null);
+    self._term_writer.append_to_buffer_line("\n", null);
+    // _ = try self._term_writer._writer.write("\x1b[34m\nprout\x1b[0m\x1b[36mprout\x1b[0m\n");
+    try self._term_writer.write_buffer();
 }

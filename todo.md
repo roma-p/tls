@@ -8,6 +8,7 @@
 - [ ] change to utf8
 - [ ] check lifecycle of every entity (do i deinit?)
 - [ ] do i keep deinit for stack?
+- [X] termwriter: only write to output once per line.
 
 ## Tests
 
@@ -16,6 +17,8 @@
 - [ ] hours is not correct.
 - [ ] extra attributes not display anymore.
 - [X] directory shant print size.
+- [ ] if seq too long, only print min / max + !!
+- [ ] lots of copy, where to use pointers?
 
 ## Missing Features.
 
@@ -24,6 +27,7 @@
 - [ ] sequence of directories.
 - [ ] symlinks
 - [ ] display extra files.
+- [ ] color for images / archives / dcc files.
 - [.] alignement of colomns.
     - [X] aligns users.
     - [ ] align to minimum size to win spaces...
