@@ -40,26 +40,23 @@ pub fn Array(comptime max_len: usize, comptime T: type, default: T) type {
         }
 
         pub fn extend(self: *Self, slice: []const T) bool {
-            var i: usize = 0;
-            var max_i: usize = 0;
-            var ret: bool = undefined;
-
-            if ((self.len + slice.len) > self.array.len) {
-                ret = false;
-                if (self.array.len > self.len) {
-                    max_i = self.array.len - self.len;
+            const max_i: usize = blk: {
+                if ((self.len + slice.len) > self.array.len) {
+                    if (self.array.len > self.len) {
+                        break :blk self.array.len - self.len;
+                    } else {
+                        return false;
+                    }
                 } else {
-                    return false;
+                    break :blk slice.len;
                 }
-            } else {
-                ret = true;
-                max_i = slice.len;
-            }
-            while (i < max_i) : (i += 1) {
-                self.array[self.len + i] = slice[i];
-            }
-            self.len += i;
-            return ret;
+            };
+
+            // Use bulk memory copy instead of element-by-element
+            @memcpy(self.array[self.len..][0..max_i], slice[0..max_i]);
+            self.len += max_i;
+
+            return max_i == slice.len;
         }
 
         pub fn get_last(self: *Self) T {
@@ -85,13 +82,10 @@ pub fn Array(comptime max_len: usize, comptime T: type, default: T) type {
 
         pub fn copy_to_arr(self: *Self, dst: []T, dst_shift: ?usize) void {
             const i_dst_shift: usize = if (dst_shift != null) dst_shift.? else 0;
-
             const i_end = @min(self.len, dst.len - i_dst_shift);
-            var i: usize = 0;
 
-            while (i < i_end) : (i += 1) {
-                dst[i + i_dst_shift] = self.array[i];
-            }
+            // Use bulk memory copy instead of element-by-element
+            @memcpy(dst[i_dst_shift..][0..i_end], self.array[0..i_end]);
         }
 
         pub fn check_is_equal(self: *Self, other: *const Self) bool {
