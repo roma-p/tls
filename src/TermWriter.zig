@@ -1,13 +1,16 @@
 const std = @import("std");
-const Writer = std.fs.File.Writer;
+const File = std.fs.File;
 const String = @import("data_structure/string.zig").String;
 
 const LineBuffer = String(512, u8);
+const OUT_BUF_SIZE = 4096;
 
 const Self = @This();
 
-_writer: Writer,
+_file: File,
 _line_buffer: LineBuffer,
+_out_buf: [OUT_BUF_SIZE]u8,
+_out_len: usize,
 
 pub const Color = enum(u8) {
     Black = '0',
@@ -22,14 +25,15 @@ pub const Color = enum(u8) {
 
 pub fn init() Self {
     return Self{
-        ._writer = std.io.getStdOut().writer(),
+        ._file = File.stdout(),
         ._line_buffer = LineBuffer.init(),
+        ._out_buf = undefined,
+        ._out_len = 0,
     };
 }
 
 pub fn deinit(self: *Self) void {
-    self._writer = undefined;
-    self._line_buffer = undefined;
+    self.* = undefined;
 }
 
 pub fn append_to_buffer_line(self: *Self, str: []const u8, color: ?Color) void {
@@ -45,6 +49,23 @@ pub fn append_to_buffer_line(self: *Self, str: []const u8, color: ?Color) void {
 }
 
 pub fn write_buffer(self: *Self) !void {
-    _ = try self._writer.write(self._line_buffer.get_slice());
+    const line = self._line_buffer.get_slice();
+    if (self._out_len + line.len > OUT_BUF_SIZE) {
+        try self.flush();
+    }
+    // If a single line exceeds the buffer, write it directly
+    if (line.len > OUT_BUF_SIZE) {
+        try self._file.writeAll(line);
+    } else {
+        @memcpy(self._out_buf[self._out_len..][0..line.len], line);
+        self._out_len += line.len;
+    }
     self._line_buffer.reset();
+}
+
+pub fn flush(self: *Self) !void {
+    if (self._out_len > 0) {
+        try self._file.writeAll(self._out_buf[0..self._out_len]);
+        self._out_len = 0;
+    }
 }

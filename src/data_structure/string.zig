@@ -34,7 +34,7 @@ pub fn String(comptime max_len: usize, comptime string_type: type) type {
         }
 
         pub fn deinit(self: *Self) void {
-            self._array.deinit();
+            self.* = undefined;
         }
 
         pub fn get_len(self: *Self) usize {

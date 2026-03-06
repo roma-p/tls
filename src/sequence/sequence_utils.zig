@@ -122,7 +122,7 @@ fn _split_filename_at_numbers(filename: []const u8) struct { [50]usize, usize } 
         if (last_c_type != current_c_type) {
             ret[ret_i] = i;
             ret_i += 1;
-            if (ret_i == 50) {
+            if (ret_i == 49) {
                 ret[ret_i] = filename.len;
                 ret_i += 1;
                 return .{ ret, ret_i };

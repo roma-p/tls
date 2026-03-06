@@ -38,7 +38,7 @@ pub fn init() Self {
 }
 
 pub fn deinit(self: *Self) void {
-    self.reset();
+    self.* = undefined;
 }
 
 pub fn reset(self: *Self) void {

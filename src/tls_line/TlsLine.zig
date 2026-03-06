@@ -18,7 +18,7 @@ owner: string.StringShortUnicode,
 date: SectionDate,
 entry_name: string.StringLongUnicode,
 entry_kind: FileKind,
-extra: string.StringLongUnicode,
+extra: string.StringLongUnicode, // TAG UNION HERE ON EXTRA TYPE.
 extra_type: ExtraType,
 // TODO: has_extra_file
 
@@ -56,33 +56,12 @@ pub fn reset(self: *Self) void {
     self.owner.reset();
     self.date.reset();
     self.entry_name.reset();
-    self.entry_name = undefined;
     self._string_buffer.reset();
     self.extra.reset();
-    self.extra = undefined;
 }
 
 pub fn deinit(self: *Self) void {
-    self.permissions.deinit();
-    self.permissions = undefined;
-    self.has_xattr = undefined;
-    self.size.deinit();
-    self.size = undefined;
-    self.owner.deinit();
-    self.owner = undefined;
-    self.date.deinit();
-    self.date = undefined;
-    self.entry_name.deinit();
-    self.entry_name = undefined;
-    self.entry_name = undefined;
-    self._string_buffer.deinit();
-    self._string_buffer = undefined;
-    self._term_writer.deinit();
-    self._term_writer = undefined;
-    self.extra.deinit();
-    self.extra = undefined;
-    self.extra_type = undefined;
-    self._max_owner_len = 0;
+    self.* = undefined;
 }
 
 pub fn display_owner(self: *Self) !void {

@@ -43,17 +43,13 @@ pub fn init() Self {
 }
 
 pub fn reset(self: *Self) void {
-    self.dir_entry_array.set_to_default();
     self.dir_entry_array.reset();
-    self.file_stat_array.set_to_default();
     self.file_stat_array.reset();
     self.max_owner_len = 0;
 }
 
 pub fn deinit(self: *Self) void {
-    self.dir_entry_array.deinit();
-    self.file_stat_array.deinit();
-    self.max_owner_len = 0;
+    self.* = undefined;
 }
 
 pub fn append(self: *Self, dir_entry: DirEntry) bool {
@@ -69,6 +65,7 @@ pub fn populate(self: *Self, dir: *Dir, eval_file_stat: bool) !void {
     while (try walker.next()) |entry| {
         if (i >= MAX_FILE_IN_DIR) break; // overflow.
         self.dir_entry_array.array[i].kind = entry.kind;
+        self.dir_entry_array.array[i].name.reset();
         self.dir_entry_array.array[i].name.append_string(entry.name);
         i += 1;
     }

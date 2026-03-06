@@ -9,6 +9,10 @@ day: u8,
 hour: u8,
 minute: u8,
 
+const c = @cImport({
+    @cInclude("time.h");
+});
+
 pub fn init(ts: u64) Self {
     const SECONDS_PER_DAY = 86400;
     const DAYS_PER_YEAR = 365;
@@ -17,8 +21,14 @@ pub fn init(ts: u64) Self {
     const DAYS_IN_400YEARS = 146097;
     const DAYS_BEFORE_EPOCH = 719468;
 
-    const seconds_since_midnight: u64 = @rem(ts, SECONDS_PER_DAY);
-    var day_n: u64 = DAYS_BEFORE_EPOCH + ts / SECONDS_PER_DAY;
+    var time_val: c.time_t = @intCast(ts);
+    var tm: c.struct_tm = undefined;
+    _ = c.localtime_r(&time_val, &tm);
+    const tz_offset: i64 = tm.tm_gmtoff;
+    const local_ts: u64 = @intCast(@as(i64, @intCast(ts)) + tz_offset);
+
+    const seconds_since_midnight: u64 = @rem(local_ts, SECONDS_PER_DAY);
+    var day_n: u64 = DAYS_BEFORE_EPOCH + local_ts / SECONDS_PER_DAY;
     var temp: u64 = 0;
 
     // Calculate century and year

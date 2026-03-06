@@ -27,9 +27,7 @@ pub fn Array(comptime max_len: usize, comptime T: type, default: T) type {
         }
 
         pub fn deinit(self: *Self) void {
-            self.array = undefined;
-            self.len = 0;
-            self.max_len = 0;
+            self.* = undefined;
         }
 
         pub fn append(self: *Self, elem: T) bool {
@@ -90,7 +88,7 @@ pub fn Array(comptime max_len: usize, comptime T: type, default: T) type {
 
         pub fn check_is_equal(self: *Self, other: *const Self) bool {
             if (self.len != other.len) return false;
-            for (self.array, 0..) |elem, i| {
+            for (self.array[0..self.len], 0..) |elem, i| {
                 if (elem != other.array[i])
                     return false;
             }

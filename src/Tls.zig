@@ -62,12 +62,7 @@ pub fn init() Self {
 }
 
 pub fn deinit(self: *Self) void {
-    self.dir_content_cur_dir.deinit();
-    self.dir_content_sub_dir.deinit();
-    self.sequence_parser.deinit();
-    self.sequence_info_array_cur_dir.deinit();
-    self.sequence_info_array_sub_dir.deinit();
-    self.tls_line.deinit();
+    self.* = undefined;
 }
 
 pub fn process(self: *Self, path: []const u8) !void {
@@ -101,6 +96,7 @@ pub fn process(self: *Self, path: []const u8) !void {
             .LastElem => self._state_last_elem(),
         }
     }
+    try self.tls_line._term_writer.flush();
 }
 
 fn _state_outside_sequence(self: *Self) void {

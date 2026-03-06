@@ -19,7 +19,6 @@ const c = @cImport({
     @cInclude("pwd.h");
 });
 
-// UID to username cache to avoid repeated getpwuid() calls
 pub const UidCache = struct {
     const MAX_CACHE_ENTRIES = 32;
 
@@ -57,7 +56,6 @@ pub const UidCache = struct {
     }
 
     pub fn insert(self: *UidCache, uid: u32, username: StringShortUnicode) void {
-        // Don't overflow the cache
         if (self.count >= MAX_CACHE_ENTRIES) return;
 
         self.entries[self.count] = CacheEntry{
@@ -80,17 +78,13 @@ pub fn init(dir: *Dir, path: []const u8, uid_cache: *UidCache) !Self {
         .has_xattr = false,
     };
 
-    // Check cache first, only call getpwuid if not cached
     if (uid_cache.lookup(stat.uid)) |cached_username| {
-        // Copy from cache
         ret.owner.append_string(cached_username.get_slice());
     } else {
-        // Cache miss - call getpwuid and cache the result
         const psswd = c.getpwuid(stat.uid);
         const name_c_type: [*c]u8 = psswd.*.pw_name;
         const name_z_type = std.mem.span(@as([*:0]const u8, name_c_type));
 
-        // considering that the C string is null terminated.
         var i: usize = 0;
         const max_len = ret.owner.get_max_len();
         while (i < max_len) : (i += 1) {
@@ -99,7 +93,6 @@ pub fn init(dir: *Dir, path: []const u8, uid_cache: *UidCache) !Self {
             ret.owner.append_char(name_z_type[i]);
         }
 
-        // Add to cache
         uid_cache.insert(stat.uid, ret.owner);
     }
 
@@ -109,8 +102,14 @@ pub fn init(dir: *Dir, path: []const u8, uid_cache: *UidCache) !Self {
 }
 
 pub fn _has_any_extended_attributes(path: []const u8) !bool {
+    var buf: [std.fs.max_path_bytes + 1]u8 = undefined;
+    if (path.len > std.fs.max_path_bytes) return false;
+    @memcpy(buf[0..path.len], path);
+    buf[path.len] = 0;
+    const c_path: [*:0]const u8 = buf[0..path.len :0];
+
     const result = c.listxattr(
-        path.ptr,
+        c_path,
         null, // Don't retrieve actual attributes
         0, // Get required buffer size
         0, // options flags.

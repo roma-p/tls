@@ -21,7 +21,7 @@ pub fn reset(self: *Self) void {
 }
 
 pub fn deinit(self: *Self) void {
-    self.permissions = undefined;
+    self.* = undefined;
 }
 
 pub fn update_from_mode(self: *Self, other_mode: u32) void {
@@ -36,14 +36,13 @@ pub fn update_from_mode(self: *Self, other_mode: u32) void {
 pub fn set_from_mode(self: *Self, mode: u32) void {
     // File type
     self.permissions[0] = switch (mode & 0o170000) {
-        0o170000 => 'b', // Block device
-        0o140000 => 'l', // Symbolic link
-        0o120000 => 'n', // Socket
-        0o110000 => 'p', // FIFO
-        0o100000 => '-', // Directory
+        0o140000 => 's', // Socket
+        0o120000 => 'l', // Symbolic link
+        0o100000 => '-', // Regular file
         0o060000 => 'b', // Block device
-        0o040000 => 'd', // Regular file
-        0o030000 => 'c', // Character device
+        0o040000 => 'd', // Directory
+        0o020000 => 'c', // Character device
+        0o010000 => 'p', // FIFO
         else => '-',
     };
 

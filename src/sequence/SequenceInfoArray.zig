@@ -27,13 +27,7 @@ pub fn reset(self: *Self) void {
 }
 
 pub fn deinit(self: *Self) void {
-    // for (self.array_seq_info.get_slice_mut()) |item| {
-    //     item.deinit();
-    // }
-    self.array_seq_info.deinit();
-    self.array_seq_info = undefined;
-    self.array_seq_start_idx.deinit();
-    self.has_extra_file = undefined;
+    self.* = undefined;
 }
 
 pub fn get_slice(self: *const Self) []const SequenceInfo {

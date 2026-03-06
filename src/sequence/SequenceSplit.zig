@@ -17,9 +17,7 @@ pub fn init() Self {
 }
 
 pub fn deinit(self: *Self) void {
-    std.mem.set(u16, &self.array, 0);
-    self.split_end = 0;
-    self.array = undefined;
+    self.* = undefined;
 }
 
 pub fn reset(self: *Self) void {
@@ -54,7 +52,7 @@ pub fn add_value(self: *Self, value: u16) void {
             return;
         } else if (value == self.array[j] + self.array[j + 1] + 1) {
             self.array[j + 1] += 1;
-            if (value + 1 == self.array[j + 2]) {
+            if (j + 3 < self.split_end * 2 and value + 1 == self.array[j + 2]) {
                 self.array[j + 1] += 1 + self.array[j + 3];
                 self._shift_left_from_idx(j + 4, 2);
                 self.split_end -= 1;

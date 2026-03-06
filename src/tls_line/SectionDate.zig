@@ -44,15 +44,7 @@ pub fn reset(self: *Self) void {
 }
 
 pub fn deinit(self: *Self) void {
-    self.less_than_a_year_ago = undefined;
-    self.day.deinit();
-    self.day = undefined;
-    self.month = undefined;
-    self.year_or_hour = undefined;
-    self.ambiguous = undefined;
-    self._now = undefined;
-    self._string_buffer.deinit();
-    self._string_buffer = undefined;
+    self.* = undefined;
 }
 
 pub fn init_from_epoch(
@@ -209,12 +201,12 @@ fn check_diff_hour(self: *Self, other: *const Self) bool {
 }
 
 pub fn display(self: *Self, writer: *TermWriter) !void {
-    const c = TermWriter.Color.Blue;
-    writer.append_to_buffer_line(self.day.get_slice(), c);
+    const color = TermWriter.Color.Blue;
+    writer.append_to_buffer_line(self.day.get_slice(), color);
     writer.append_to_buffer_line(" ", null);
-    writer.append_to_buffer_line(&self.month, c);
+    writer.append_to_buffer_line(&self.month, color);
     writer.append_to_buffer_line(" ", null);
-    writer.append_to_buffer_line(&self.year_or_hour, c);
+    writer.append_to_buffer_line(&self.year_or_hour, color);
 }
 
 fn _is_date_older_by_a_year(now: DateTime, date: DateTime) bool {
@@ -222,7 +214,7 @@ fn _is_date_older_by_a_year(now: DateTime, date: DateTime) bool {
         return false;
     } else if (date.year + 1 < now.year) {
         return true;
-    } else if (date.month < now.month) {
+    } else if (date.month > now.month) {
         return false;
     } else {
         return true;

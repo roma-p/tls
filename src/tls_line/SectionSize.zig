@@ -37,12 +37,7 @@ pub fn reset(self: *Self) void {
 }
 
 pub fn deinit(self: *Self) void {
-    self.size_indicator = undefined;
-    self.size = undefined;
-    self.size_char = undefined;
-    self.buffer_string.deinit();
-    self.buffer_string = undefined;
-    self.ambiguous = undefined;
+    self.* = undefined;
 }
 
 pub fn init_from_size(number: u64) Self {
@@ -85,7 +80,7 @@ pub fn init_from_size(number: u64) Self {
         .size_indicator = size_range,
         .size = ret,
         .size_char = c,
-        .buffer_string = undefined,
+        .buffer_string = SizeBufferString.init(),
         .ambiguous = .Identical,
     };
 }
