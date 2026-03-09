@@ -68,7 +68,7 @@ pub const UidCache = struct {
 };
 
 pub fn init(dir: *Dir, path: []const u8, uid_cache: *UidCache) !Self {
-    const stat = try posix.fstatat(dir.fd, path, 0); // TODO: return "unknown stat..."
+    const stat = try posix.fstatat(dir.fd, path, posix.AT.SYMLINK_NOFOLLOW);
     const mtime = stat.mtime();
     var ret = Self{
         .owner = StringShortUnicode.init(),

@@ -18,7 +18,7 @@ owner: string.StringShortUnicode,
 date: SectionDate,
 entry_name: string.StringLongUnicode,
 entry_kind: FileKind,
-extra: string.StringLongUnicode, // TAG UNION HERE ON EXTRA TYPE.
+extra: ExtraData,
 extra_type: ExtraType,
 // TODO: has_extra_file
 
@@ -32,6 +32,27 @@ pub const ExtraType = enum {
     Symlink,
 };
 
+pub const ExtraData = union(ExtraType) {
+    None: void,
+    Sequence: string.StringLongUnicode,
+    Symlink:  struct {
+        target: string.StringLongUnicode,
+        target_exists: bool,
+    },
+
+    pub fn reset(self: *ExtraData) void {
+        switch (self.*) {
+            .None => {},
+            .Sequence => |*seq| seq.reset(),
+            .Symlink => |*symlink| {
+                symlink.target.reset();
+                symlink.target_exists = false;
+            },
+
+        }
+    }
+};
+
 pub fn init() Self {
     return Self{
         .permissions = SectionPermissions.init(),
@@ -41,7 +62,7 @@ pub fn init() Self {
         .date = SectionDate.init(),
         .entry_name = string.StringLongUnicode.init(),
         .entry_kind = undefined,
-        .extra = string.StringLongUnicode.init(),
+        .extra = undefined,
         .extra_type = undefined,
         ._string_buffer = string.StringShortAscii.init(),
         ._term_writer = TermWriter.init(),
@@ -91,9 +112,24 @@ pub fn display_entry_name(self: *Self) !void {
     self._term_writer.append_to_buffer_line(self.entry_name.get_slice(), c);
 }
 
-pub fn display_sequence(self: *Self) !void {
-    self._term_writer.append_to_buffer_line(" :: ", TermWriter.Color.White);
-    self._term_writer.append_to_buffer_line(self.extra.get_slice(), TermWriter.Color.Cyan);
+pub fn display_extra(self: *Self) void {
+    switch (self.extra) {
+        .None => {},
+        .Sequence => |*seq| {
+            self._term_writer.append_to_buffer_line(" :: ", TermWriter.Color.White);
+            self._term_writer.append_to_buffer_line(seq.get_slice(), TermWriter.Color.Cyan);
+        },
+        .Symlink => |*symlink|{
+            var color: TermWriter.Color = undefined;
+            if (symlink.target_exists) {
+                color = TermWriter.Color.Green;
+            } else {
+                color = TermWriter.Color.Red;
+            }
+            self._term_writer.append_to_buffer_line(" -> ", color);
+            self._term_writer.append_to_buffer_line(symlink.target.get_slice(), color);
+        },
+    }
 }
 
 pub fn display_size(self: *Self) !void {
@@ -125,13 +161,7 @@ pub fn display(self: *Self) !void {
     try self.date.display(term_writer_ref);
     self._term_writer.append_to_buffer_line(" ", null);
     try self.display_entry_name();
-
-    switch (self.extra_type) {
-        .None => {},
-        .Symlink => unreachable,
-        .Sequence => try self.display_sequence(),
-    }
+    self.display_extra();
     self._term_writer.append_to_buffer_line("\n", null);
-    // _ = try self._term_writer._writer.write("\x1b[34m\nprout\x1b[0m\x1b[36mprout\x1b[0m\n");
     try self._term_writer.write_buffer();
 }

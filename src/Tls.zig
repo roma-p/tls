@@ -2,6 +2,7 @@ const std = @import("std");
 const fs = std.fs;
 const DirEntry = fs.Dir.Entry;
 const format_sequence = @import("tls_line/format_sequence.zig"); // TODO: rework this module
+const string = @import("data_structure/string.zig");
 
 const FileStat = @import("file_structure/FileStat.zig");
 const SequenceInfo = @import("sequence/SequenceInfo.zig");
@@ -160,6 +161,8 @@ fn _process_single_entry(self: *Self) !void {
     const entry = self._dir_entry_slice[self._dir_entry_idx];
     const fstat = self._f_stat_slice[self._dir_entry_idx];
 
+    self.tls_line.extra = .{ .None = {} };
+
     switch (self._state) {
         .OutSequence => self._set_tls_line(&entry, fstat),
         .FirstElem => self._set_tls_line(&entry, fstat),
@@ -169,6 +172,20 @@ fn _process_single_entry(self: *Self) !void {
     switch (entry.kind) {
         .file => {
             self.tls_line.extra_type = TlsLine.ExtraType.None;
+        },
+        .sym_link => {
+            var target_buf: [std.fs.max_path_bytes]u8 = undefined;
+            const target = self.dir_fs.readLink(
+                entry.name.get_slice(),
+                &target_buf,
+            ) catch "?";
+
+            self.tls_line.extra_type = TlsLine.ExtraType.Symlink;
+            self.tls_line.extra = .{ .Symlink = .{
+                    .target = string.StringLongUnicode.init_from_slice(target),
+                    .target_exists = if (self.dir_fs.access(target, .{})) true else |_| false,
+                },
+            };
         },
         .directory => {
             try self._process_single_dir();
@@ -205,12 +222,13 @@ fn _process_single_dir(self: *Self) !void {
         const seq = seq_or_null.?;
         self.tls_line.extra_type = TlsLine.ExtraType.Sequence;
         self.tls_line.extra.reset();
+        self.tls_line.extra = .{ .Sequence = string.StringLongUnicode.init() };
         format_sequence.format_sequence(
             seq.pattern_before.get_slice(),
             seq.pattern_after.get_slice(),
             &seq.sequence_split.array,
             seq.sequence_split.split_end,
-            &self.tls_line.extra,
+            &self.tls_line.extra.Sequence,
         );
     } else {
         self.tls_line.extra_type = TlsLine.ExtraType.None;
