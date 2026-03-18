@@ -143,7 +143,10 @@ pub fn _fill_extension(filename: []const u8, extString: *StringExt) void {
         } 
     }
     if (dot_found) {
-        extString.set_string(filename[j+1..]);
+        extString.reset();
+        for (filename[j+1..]) |ch| {
+            extString.append_char(std.ascii.toLower(ch));
+        }
     } else {
         extString.reset();
     }
