@@ -7,6 +7,7 @@ const zig_utils = @import("../zig_utils.zig");
 const TermWriter = @import("../TermWriter.zig");
 const SectionDate = @import("SectionDate.zig");
 const SectionSize = @import("SectionSize.zig");
+const EntryColor = @import("section_name.zig").EntryColor;
 const SectionPermissions = @import("SectionPermissions.zig");
 
 const Self = @This();
@@ -18,6 +19,7 @@ owner: string.StringShortUnicode,
 date: SectionDate,
 entry_name: string.StringLongUnicode,
 entry_kind: FileKind,
+ext: string.StringExt,
 extra: ExtraData,
 extra_type: ExtraType,
 // TODO: has_extra_file
@@ -64,6 +66,7 @@ pub fn init() Self {
         .entry_kind = undefined,
         .extra = undefined,
         .extra_type = undefined,
+        .ext = string.StringExt.init(),
         ._string_buffer = string.StringShortAscii.init(),
         ._term_writer = TermWriter.init(),
         ._max_owner_len = 0,
@@ -79,6 +82,7 @@ pub fn reset(self: *Self) void {
     self.entry_name.reset();
     self._string_buffer.reset();
     self.extra.reset();
+    self.ext.reset();
 }
 
 pub fn deinit(self: *Self) void {
@@ -107,7 +111,15 @@ pub fn display_xtattr(self: *Self) !void {
 pub fn display_entry_name(self: *Self) !void {
     const c: TermWriter.Color = switch (self.entry_kind) {
         .directory => .Blue,
-        else => .White,
+        else => blk : {
+            if (!self.ext.is_not_null()) {
+                break :blk .White;
+            } else if (EntryColor.color_from_ext(self.ext.get_slice())) |c| {
+                break :blk c;
+            } else {
+                break :blk .White;
+            }
+        },
     };
     self._term_writer.append_to_buffer_line(self.entry_name.get_slice(), c);
 }

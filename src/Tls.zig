@@ -41,11 +41,11 @@ const State = enum {
     LastElem,
 };
 
-pub fn init() Self {
+pub fn init(allocator: std.mem.Allocator) !Self {
     return Self{
         .dir_fs = undefined,
-        .dir_content_cur_dir = DirContent.init(),
-        .dir_content_sub_dir = DirContent.init(),
+        .dir_content_cur_dir = try DirContent.init(allocator),
+        .dir_content_sub_dir = try DirContent.init(allocator),
         .sequence_parser = SequenceParser.init(),
         .sequence_info_array_cur_dir = SequenceInfoArray.init(),
         .sequence_info_array_sub_dir = SequenceInfoArray.init(),
@@ -261,6 +261,7 @@ fn _set_tls_line(
     self.tls_line.date.set_from_epoch(stat_refined.mtime);
     self.tls_line.entry_name.set_string(entry.name.get_slice());
     self.tls_line.entry_kind = entry.kind;
+    self.tls_line.ext = stat_refined.ext;
 }
 
 fn _update_tls_line(self: *Self, stat_refined: FileStat) void {

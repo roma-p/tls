@@ -4,7 +4,11 @@ const posix = std.posix;
 const PosixStat = std.posix.Stat;
 const Dir = std.fs.Dir;
 const constants = @import("../constants.zig");
-const StringShortUnicode = @import("../data_structure/string.zig").StringShortUnicode;
+const string = @import("../data_structure/string.zig");
+const StringExt = string.StringExt;
+const StringShortUnicode = string.StringShortUnicode;
+
+const MAX_STR_LEN_EXT = string.MAX_STR_LEN_EXT;
 
 const Self = @This();
 
@@ -13,6 +17,7 @@ mode: u32,
 size: u64,
 mtime: u64,
 has_xattr: bool,
+ext: StringExt,
 
 const c = @cImport({
     @cInclude("sys/xattr.h");
@@ -76,6 +81,7 @@ pub fn init(dir: *Dir, path: []const u8, uid_cache: *UidCache) !Self {
         .size = @bitCast(stat.size),
         .mtime = @intCast(@as(i128, mtime.sec)),
         .has_xattr = false,
+        .ext = StringExt.init(),
     };
 
     if (uid_cache.lookup(stat.uid)) |cached_username| {
@@ -97,6 +103,7 @@ pub fn init(dir: *Dir, path: []const u8, uid_cache: *UidCache) !Self {
     }
 
     if (try _has_any_extended_attributes(path)) ret.has_xattr = true;
+    _fill_extension(path, &ret.ext);
 
     return ret;
 }
@@ -121,6 +128,25 @@ pub fn _has_any_extended_attributes(path: []const u8) !bool {
         return false;
     } else return false; // FIXE ME: masking errors...(if -1)
 
+}
+
+pub fn _fill_extension(filename: []const u8, extString: *StringExt) void {
+    var i: usize = 1;
+    var j: usize = 0;
+    var dot_found: bool = false;
+    while (i < MAX_STR_LEN_EXT) : ( i +=1 ) {
+        if (i >= filename.len) break;
+        j = filename.len - i;
+        if (filename[j] == '.') {
+            dot_found = true;
+            break;
+        } 
+    }
+    if (dot_found) {
+        extString.set_string(filename[j+1..]);
+    } else {
+        extString.reset();
+    }
 }
 
 test "file info" {

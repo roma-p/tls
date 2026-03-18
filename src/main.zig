@@ -2,7 +2,11 @@ const std = @import("std");
 const Tls = @import("Tls.zig");
 
 pub fn main() !void {
-    var tls = Tls.init();
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    var tls = try Tls.init(allocator);
     defer tls.deinit();
     if (std.os.argv.len == 1) {
         try tls.process(".");

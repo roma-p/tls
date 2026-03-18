@@ -1,6 +1,7 @@
 const std = @import("std");
 const string = @import("../data_structure/string.zig");
 const Array = @import("../data_structure/array.zig").Array;
+const DynamicArray = @import("../data_structure/darray.zig").DynamicArray;
 const FileStat = @import("FileStat.zig");
 
 const fs = std.fs;
@@ -11,10 +12,12 @@ const StringLongUnicode = string.StringLongUnicode;
 const Self = @This();
 
 pub const MAX_FILE_IN_DIR = 1024;
+pub const FILE_IN_DIR_INIT_SIZE = 64;
 
 dir_entry_array: DirEntryArray,
 file_stat_array: FileStatArray,
 max_owner_len: usize,
+allocator: std.mem.Allocator,
 
 pub const DirEntry = struct {
     name: StringLongUnicode,
@@ -26,18 +29,23 @@ const default_dir_entry = DirEntry{
     .kind = .file,
 };
 
-const DirEntryArray = Array(
-    MAX_FILE_IN_DIR,
+const DirEntryArray = DynamicArray(
+    FILE_IN_DIR_INIT_SIZE,
     DirEntry,
     default_dir_entry,
 );
 
-const FileStatArray = Array(MAX_FILE_IN_DIR, FileStat, undefined);
+const FileStatArray = DynamicArray(
+    FILE_IN_DIR_INIT_SIZE,
+    FileStat,
+    undefined
+);
 
-pub fn init() Self {
+pub fn init(allocator: std.mem.Allocator) !Self {
     return Self{
-        .dir_entry_array = DirEntryArray.init(),
-        .file_stat_array = FileStatArray.init(),
+        .allocator = allocator,
+        .dir_entry_array = try DirEntryArray.init(allocator),
+        .file_stat_array = try FileStatArray.init(allocator),
         .max_owner_len = 0,
     };
 }
@@ -49,6 +57,8 @@ pub fn reset(self: *Self) void {
 }
 
 pub fn deinit(self: *Self) void {
+    self.dir_entry_array.deinit();
+    self.file_stat_array.deinit();
     self.* = undefined;
 }
 
@@ -82,7 +92,7 @@ pub fn populate(self: *Self, dir: *Dir, eval_file_stat: bool) !void {
 
     for (self.dir_entry_array.get_slice()) |c| {
         const file_stat = try FileStat.init(dir, c.name.get_slice(), &uid_cache);
-        _ = self.file_stat_array.append(file_stat);
+        try self.file_stat_array.append(file_stat);
         const owner_len = file_stat.owner._array.len;
         if (owner_len > self.max_owner_len) {
             self.max_owner_len = owner_len;

@@ -1,21 +1,28 @@
-const std = @import("std");
 
-pub fn Array(comptime max_len: usize, comptime T: type, default: T) type {
+const std = @import("std");
+const Allocator = std.mem.Allocator;
+
+pub fn DynamicArray(comptime init_size: usize, comptime T: type, default: T) type {
     return struct {
-        array: [max_len]T,
         len: usize,
+        capacity: usize,
         default: T,
-        max_len: usize,
+        array: []T,
+        allocator: Allocator,
 
         const Self = @This();
 
-        pub fn init() Self {
-            return Self{
-                .array = [_]T{default} ** max_len,
+
+        pub fn init(allocator: Allocator) !Self {
+            const ret = Self{
                 .len = 0,
+                .capacity = init_size,
                 .default = default,
-                .max_len = max_len,
+                .array = try allocator.alloc(T, init_size),
+                .allocator = allocator,
             };
+            @memset(ret.array[0..ret.capacity], ret.default);
+            return ret;
         }
 
         pub fn reset(self: *Self) void {
@@ -23,37 +30,24 @@ pub fn Array(comptime max_len: usize, comptime T: type, default: T) type {
         }
 
         pub fn set_to_default(self: *Self) void {
-            self.array = [_]T{default} ** max_len;
+            @memset(self.array[0..self.capacity], self.default);
         }
 
         pub fn deinit(self: *Self) void {
+            self.allocator.free(self.array);
             self.* = undefined;
         }
 
-        pub fn append(self: *Self, elem: T) bool {
-            if (self.len >= self.array.len) return false;
+        pub fn append(self: *Self, elem: T) !void{
+            try self.ensureCapacity(self.len + 1);
             self.array[self.len] = elem;
             self.len += 1;
-            return true;
         }
 
-        pub fn extend(self: *Self, slice: []const T) bool {
-            const max_i: usize = blk: {
-                if ((self.len + slice.len) > self.array.len) {
-                    if (self.array.len > self.len) {
-                        break :blk self.array.len - self.len;
-                    } else {
-                        return false;
-                    }
-                } else {
-                    break :blk slice.len;
-                }
-            };
-
-            @memcpy(self.array[self.len..][0..max_i], slice[0..max_i]);
-            self.len += max_i;
-
-            return max_i == slice.len;
+        pub fn extend(self: *Self, slice: []const T) !void {
+            try self.ensureCapacity(self.len + slice.len);
+            @memcpy(self.array[self.len..][0..slice.len], slice[0..slice.len]);
+            self.len = self.len + slice.len;
         }
 
         pub fn get_last(self: *Self) T {
@@ -64,9 +58,9 @@ pub fn Array(comptime max_len: usize, comptime T: type, default: T) type {
             return self.array[i];
         }
 
-        pub fn set(self: *Self, slice: []const T) bool {
+        pub fn set(self: *Self, slice: []const T) !void {
             self.reset();
-            return self.extend(slice);
+            try self.extend(slice);
         }
 
         pub fn trim(self: *Self, trim_range: usize) void {
@@ -94,6 +88,21 @@ pub fn Array(comptime max_len: usize, comptime T: type, default: T) type {
 
         pub fn print_debug(self: *const Self) void {
             std.debug.print("{any}\n", .{self.array[0..self.len]});
+        }
+
+        pub fn ensureCapacity(self: *Self, capacity: usize) !void {
+            if (self.capacity >= capacity) return;
+            const new_capacity = capacity * 2;
+            if (self.allocator.remap(self.array, new_capacity)) |new_memory| {
+                self.array = new_memory;
+                self.capacity = new_capacity;
+            } else {
+                const new_memory = try self.allocator.alloc(T, new_capacity);
+                @memcpy(new_memory[0..self.len], self.array[0..self.len]);
+                self.allocator.free(self.array);
+                self.array = new_memory;
+                self.capacity = new_capacity;
+            }
         }
     };
 }
