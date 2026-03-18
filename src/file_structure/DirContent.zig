@@ -11,7 +11,6 @@ const StringLongUnicode = string.StringLongUnicode;
 
 const Self = @This();
 
-pub const MAX_FILE_IN_DIR = 1024;
 pub const FILE_IN_DIR_INIT_SIZE = 64;
 
 dir_entry_array: DirEntryArray,
@@ -73,13 +72,13 @@ pub fn populate(self: *Self, dir: *Dir, eval_file_stat: bool) !void {
     var i: usize = 0;
 
     while (try walker.next()) |entry| {
-        if (i >= MAX_FILE_IN_DIR) break; // overflow.
+        try self.dir_entry_array.ensureCapacity(i + 1);
         self.dir_entry_array.array[i].kind = entry.kind;
         self.dir_entry_array.array[i].name.reset();
         self.dir_entry_array.array[i].name.append_string(entry.name);
         i += 1;
+        self.dir_entry_array.len = i;
     }
-    self.dir_entry_array.len = i;
     // Only sort the populated entries, not the entire array
     std.mem.sort(DirEntry, self.dir_entry_array.array[0..i], {}, _less_than);
 
@@ -90,14 +89,20 @@ pub fn populate(self: *Self, dir: *Dir, eval_file_stat: bool) !void {
     // Create UID cache to avoid repeated getpwuid() calls
     var uid_cache = FileStat.UidCache.init();
 
-    for (self.dir_entry_array.get_slice()) |c| {
-        const file_stat = try FileStat.init(dir, c.name.get_slice(), &uid_cache);
+    var j: usize = 0;
+    for (self.dir_entry_array.array[0..i]) |c| {
+        const file_stat = FileStat.init(dir, c.name.get_slice(), &uid_cache) catch {
+            continue;
+        };
+        self.dir_entry_array.array[j] = c;
         try self.file_stat_array.append(file_stat);
         const owner_len = file_stat.owner._array.len;
         if (owner_len > self.max_owner_len) {
             self.max_owner_len = owner_len;
         }
+        j += 1;
     }
+    self.dir_entry_array.len = j;
 }
 
 pub fn get_slice(self: *Self) []const DirEntry {

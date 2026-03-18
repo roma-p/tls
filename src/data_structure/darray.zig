@@ -95,10 +95,12 @@ pub fn DynamicArray(comptime init_size: usize, comptime T: type, default: T) typ
             const new_capacity = capacity * 2;
             if (self.allocator.remap(self.array, new_capacity)) |new_memory| {
                 self.array = new_memory;
+                @memset(new_memory[self.capacity..new_capacity], self.default);
                 self.capacity = new_capacity;
             } else {
                 const new_memory = try self.allocator.alloc(T, new_capacity);
                 @memcpy(new_memory[0..self.len], self.array[0..self.len]);
+                @memset(new_memory[self.len..new_capacity], self.default);
                 self.allocator.free(self.array);
                 self.array = new_memory;
                 self.capacity = new_capacity;
