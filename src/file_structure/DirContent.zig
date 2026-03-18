@@ -118,8 +118,56 @@ pub fn print_debug(self: *Self) void {
 }
 
 fn _less_than(_: void, lhs: DirEntry, rhs: DirEntry) bool {
-    const lhs_slice = lhs.name.get_slice();
-    const rhs_slice = rhs.name.get_slice();
-    // No need for empty string checks since we only sort populated entries
-    return std.ascii.orderIgnoreCase(lhs_slice, rhs_slice) == .lt;
+    const a = lhs.name.get_slice();
+    const b = rhs.name.get_slice();
+
+    // Sort by extension first so same-extension files are adjacent (enables sequence grouping)
+    const ext_a = _get_extension(a);
+    const ext_b = _get_extension(b);
+    const ext_ord = _natural_order(ext_a, ext_b);
+    if (ext_ord != .eq) return ext_ord == .lt;
+
+    // Same extension: natural sort by full name
+    return _natural_order(a, b) == .lt;
+}
+
+fn _get_extension(name: []const u8) []const u8 {
+    var i: usize = name.len;
+    while (i > 0) {
+        i -= 1;
+        if (name[i] == '.') return name[i..];
+    }
+    return "";
+}
+
+fn _natural_order(a: []const u8, b: []const u8) std.math.Order {
+    var i: usize = 0;
+    var j: usize = 0;
+    while (i < a.len and j < b.len) {
+        const a_is_digit = std.ascii.isDigit(a[i]);
+        const b_is_digit = std.ascii.isDigit(b[j]);
+
+        if (a_is_digit and b_is_digit) {
+            var a_num: u64 = 0;
+            var a_start = i;
+            while (a_start < a.len and std.ascii.isDigit(a[a_start])) : (a_start += 1) {
+                a_num = a_num * 10 + (a[a_start] - '0');
+            }
+            var b_num: u64 = 0;
+            var b_start = j;
+            while (b_start < b.len and std.ascii.isDigit(b[b_start])) : (b_start += 1) {
+                b_num = b_num * 10 + (b[b_start] - '0');
+            }
+            if (a_num != b_num) return std.math.order(a_num, b_num);
+            i = a_start;
+            j = b_start;
+        } else {
+            const ac = std.ascii.toLower(a[i]);
+            const bc = std.ascii.toLower(b[j]);
+            if (ac != bc) return std.math.order(ac, bc);
+            i += 1;
+            j += 1;
+        }
+    }
+    return std.math.order(a.len, b.len);
 }
