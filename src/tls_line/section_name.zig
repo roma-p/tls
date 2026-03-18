@@ -11,8 +11,8 @@ pub const EntryColor = enum {
     // Add extension to type of file here.
     const type_to_ext = .{
         .Image = .{ "exr", "jpg", "jpeg", "png" },
-        .Dcc   = .{ "ma",  "nk",  "hip",  "c4d" },
-        .Cache = .{ "ass", "abc", "fbx",  "usd" },
+        .Dcc   = .{ "ma",  "nk",  "hip",  "c4d", "zpr"},
+        .Cache = .{ "ass", "abc", "fbx",  "usd", },
     };
 
     // Assign coloring to a type of file here.
