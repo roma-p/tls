@@ -1,7 +1,6 @@
 const std = @import("std");
 const string = @import("../data_structure/string.zig");
 const DateTime = @import("../DateTime.zig");
-const zig_utils = @import("../zig_utils.zig");
 const TermWriter = @import("../TermWriter.zig");
 
 const Self = @This();
@@ -55,6 +54,7 @@ pub fn init_from_epoch(
     const date = DateTime.init(epoch);
     const is_older_by_a_year = Self._is_date_older_by_a_year(now, date);
     var ret = Self.init();
+    ret.less_than_a_year_ago = if (is_older_by_a_year) 0 else 1;
 
     string_buffer.reset();
     string_buffer.append_number(u8, date.day, 2, null);
@@ -63,7 +63,7 @@ pub fn init_from_epoch(
     ret.day.set_string(day_slice);
 
     const month_tmp = _conv_mont_id_to_trigram(date.month);
-    zig_utils.copy_arr(u8, month_tmp, &ret.month, 3);
+    @memcpy(&ret.month, month_tmp[0..3]);
 
     string_buffer.reset();
     if (is_older_by_a_year) {
@@ -214,10 +214,15 @@ fn _is_date_older_by_a_year(now: DateTime, date: DateTime) bool {
         return false;
     } else if (date.year + 1 < now.year) {
         return true;
-    } else if (date.month > now.month) {
-        return false;
     } else {
-        return true;
+        // date.year + 1 == now.year: compare month then day
+        if (date.month > now.month) {
+            return false;
+        } else if (date.month < now.month) {
+            return true;
+        } else {
+            return date.day <= now.day;
+        }
     }
 }
 

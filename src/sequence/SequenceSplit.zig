@@ -60,8 +60,8 @@ pub fn add_value(self: *Self, value: u16) void {
             return;
         }
     }
-    if (j == self.array.len) return;
     j += 2;
+    if (j + 1 >= self.array.len) return;
     self.array[j] = value;
     self.array[j + 1] = 0;
     self.split_end += 1;

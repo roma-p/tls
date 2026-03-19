@@ -3,7 +3,6 @@ const fs = std.fs;
 const Writer = fs.File.Writer;
 const FileKind = fs.File.Kind;
 const string = @import("../data_structure/string.zig");
-const zig_utils = @import("../zig_utils.zig");
 const TermWriter = @import("../TermWriter.zig");
 const SectionDate = @import("SectionDate.zig");
 const SectionSize = @import("SectionSize.zig");
@@ -100,7 +99,7 @@ pub fn display_owner(self: *Self) !void {
     self._term_writer.append_to_buffer_line(self.owner.get_slice(), TermWriter.Color.Yellow);
 }
 
-pub fn display_xtattr(self: *Self) !void {
+pub fn display_xattr(self: *Self) !void {
     if (self.has_xattr) {
         self._term_writer.append_to_buffer_line("@", TermWriter.Color.Green);
     } else {
@@ -164,7 +163,7 @@ pub fn update_owner(self: *Self, other_owner: *const string.StringShortUnicode) 
 pub fn display(self: *Self) !void {
     const term_writer_ref = &self._term_writer;
     try self.permissions.display(term_writer_ref);
-    try self.display_xtattr();
+    try self.display_xattr();
     self._term_writer.append_to_buffer_line(" ", null);
     try self.display_size();
     self._term_writer.append_to_buffer_line(" ", null);

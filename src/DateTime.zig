@@ -66,12 +66,17 @@ pub fn init(ts: u64) Self {
 }
 
 test "parse timestamp with minutes" {
-    const timestamp = 1640995200; // January 1, 2022 00:00:00 UTC
+    // Use localtime_r to get expected local values, same as init() does
+    const timestamp: u64 = 1640995200; // January 1, 2022 00:00:00 UTC
     const dt = init(timestamp);
 
-    try std.testing.expectEqual(@as(u16, 2022), dt.year);
-    try std.testing.expectEqual(@as(u8, 1), dt.month); // January
-    try std.testing.expectEqual(@as(u8, 1), dt.day);
-    try std.testing.expectEqual(@as(u8, 0), dt.hour);
-    try std.testing.expectEqual(@as(u8, 0), dt.minute);
+    var time_val: c.time_t = @intCast(timestamp);
+    var tm: c.struct_tm = undefined;
+    _ = c.localtime_r(&time_val, &tm);
+
+    try std.testing.expectEqual(@as(u16, @intCast(tm.tm_year + 1900)), dt.year);
+    try std.testing.expectEqual(@as(u8, @intCast(tm.tm_mon + 1)), dt.month);
+    try std.testing.expectEqual(@as(u8, @intCast(tm.tm_mday)), dt.day);
+    try std.testing.expectEqual(@as(u8, @intCast(tm.tm_hour)), dt.hour);
+    try std.testing.expectEqual(@as(u8, @intCast(tm.tm_min)), dt.minute);
 }

@@ -41,10 +41,10 @@ pub fn deinit(self: *Self) void {
 }
 
 pub fn init_from_size(number: u64) Self {
-    const ko = 1_000;
-    const mo = 1_000_000;
-    const go = 1_000_000_000;
-    const to = 1_000_000_000_000;
+    const kb = 1_000;
+    const mb = 1_000_000;
+    const gb = 1_000_000_000;
+    const tb = 1_000_000_000_000;
 
     const tmp_1: i128 = number;
     const tmp_2: f64 = @floatFromInt(tmp_1);
@@ -53,21 +53,21 @@ pub fn init_from_size(number: u64) Self {
     var tmp_3: f64 = 0;
     var size_range: u2 = 1;
 
-    if (tmp_2 > 999 * to) {
+    if (tmp_2 > 999 * tb) {
         c = ' ';
         size_range = 2;
-    } else if (tmp_2 > to) {
+    } else if (tmp_2 > tb) {
         c = 'T';
-        tmp_3 = tmp_2 / to;
-    } else if (tmp_2 > go) {
+        tmp_3 = tmp_2 / tb;
+    } else if (tmp_2 > gb) {
         c = 'G';
-        tmp_3 = tmp_2 / go;
-    } else if (tmp_2 > mo) {
+        tmp_3 = tmp_2 / gb;
+    } else if (tmp_2 > mb) {
         c = 'M';
-        tmp_3 = tmp_2 / mo;
-    } else if (tmp_2 > ko) {
+        tmp_3 = tmp_2 / mb;
+    } else if (tmp_2 > kb) {
         c = 'k';
-        tmp_3 = tmp_2 / ko;
+        tmp_3 = tmp_2 / kb;
     } else {
         c = ' ';
         size_range = 0;
@@ -107,28 +107,24 @@ pub fn update_from_size(self: *Self, number: u64) void {
 }
 
 pub fn display(self: *Self, writer: *TermWriter) !void {
-    const is_size_to_print = true;
-    if (is_size_to_print) {
-        if (self.ambiguous == .Different) {
+    self.buffer_string.reset();
+    if (self.ambiguous == .Different) {
+        self.buffer_string.append_string("     ?");
+    } else if (self.size_indicator == 0) {
+        if (self.ambiguous == .SameChar) {
             self.buffer_string.append_string("     ?");
-        } else if (self.size_indicator == 0) {
-            if (self.ambiguous == .SameChar) {
-                self.buffer_string.append_string("     ?");
-            } else {
-                self.buffer_string.append_number(f32, self.size, 6, null);
-            }
-        } else if (self.size_indicator == 1) {
-            if (self.ambiguous == .Identical) {
-                self.buffer_string.append_number(f32, self.size, 5, null);
-            } else {
-                self.buffer_string.append_string("    ?");
-            }
-            self.buffer_string.append_char(self.size_char);
         } else {
-            self.buffer_string.append_string("  huge");
+            self.buffer_string.append_number(f32, self.size, 6, null);
         }
+    } else if (self.size_indicator == 1) {
+        if (self.ambiguous == .Identical) {
+            self.buffer_string.append_number(f32, self.size, 5, null);
+        } else {
+            self.buffer_string.append_string("    ?");
+        }
+        self.buffer_string.append_char(self.size_char);
     } else {
-        self.buffer_string.append_string("     -");
+        self.buffer_string.append_string("  huge");
     }
     writer.append_to_buffer_line(self.buffer_string.get_slice(), TermWriter.Color.Green);
 }

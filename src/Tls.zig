@@ -47,8 +47,8 @@ pub fn init(allocator: std.mem.Allocator) !Self {
         .dir_content_cur_dir = try DirContent.init(allocator),
         .dir_content_sub_dir = try DirContent.init(allocator),
         .sequence_parser = SequenceParser.init(),
-        .sequence_info_array_cur_dir = SequenceInfoArray.init(),
-        .sequence_info_array_sub_dir = SequenceInfoArray.init(),
+        .sequence_info_array_cur_dir = try SequenceInfoArray.init(allocator),
+        .sequence_info_array_sub_dir = try SequenceInfoArray.init(allocator),
         .tls_line = TlsLine.init(),
         ._f_stat_slice = undefined,
         ._dir_entry_slice = undefined,
@@ -63,24 +63,29 @@ pub fn init(allocator: std.mem.Allocator) !Self {
 }
 
 pub fn deinit(self: *Self) void {
+    self.dir_content_cur_dir.deinit();
+    self.dir_content_sub_dir.deinit();
+    self.sequence_info_array_cur_dir.deinit();
+    self.sequence_info_array_sub_dir.deinit();
     self.* = undefined;
 }
 
 pub fn process(self: *Self, path: []const u8) !void {
     self.dir_fs = try fs.cwd().openDir(path, .{ .access_sub_paths = false, .iterate = true });
+    defer self.dir_fs.close();
 
     try self.dir_content_cur_dir.populate(&self.dir_fs, true);
     self.tls_line._max_owner_len = self.dir_content_cur_dir.max_owner_len;
-    self.sequence_parser.parse_sequence(self.dir_content_cur_dir.get_slice(), &self.sequence_info_array_cur_dir);
+    try self.sequence_parser.parse_sequence(self.dir_content_cur_dir.get_slice(), &self.sequence_info_array_cur_dir);
 
     self._dir_entry_idx = 0;
     self._dir_entry_slice = self.dir_content_cur_dir.get_slice();
     self._f_stat_slice = self.dir_content_cur_dir.file_stat_array.get_slice();
 
-    const seq_nbr = self.sequence_parser.sequence_info_array.array_seq_start_idx.len;
+    self._seq_nbr = self.sequence_parser.sequence_info_array.array_seq_start_idx.len;
     self._curr_seq_idx = 0;
     self._state = .OutSequence;
-    self._has_sequence = if (seq_nbr == 0) false else true;
+    self._has_sequence = self._seq_nbr > 0;
     if (self._has_sequence) {
         self._update_seq_start_stop();
         if (self._is_in_sequence()) {
@@ -101,7 +106,7 @@ pub fn process(self: *Self, path: []const u8) !void {
 }
 
 fn _state_outside_sequence(self: *Self) void {
-    if (self._is_enterring_sequence()) {
+    if (self._is_entering_sequence()) {
         self._state = .FirstElem;
     }
 }
@@ -122,13 +127,13 @@ fn _state_in_sequence(self: *Self) void {
 fn _state_last_elem(self: *Self) void {
     self._increment_seq_iterator();
     self._update_seq_start_stop();
-    self._state = switch (self._is_enterring_sequence()) {
+    self._state = switch (self._is_entering_sequence()) {
         true => .FirstElem,
         false => .OutSequence,
     };
 }
 
-fn _is_enterring_sequence(self: *Self) bool {
+fn _is_entering_sequence(self: *Self) bool {
     return (self._dir_entry_idx + 1 == self._curr_seq_start_idx);
 }
 
@@ -210,9 +215,10 @@ fn _process_single_dir(self: *Self) !void {
     ) catch {
         return;
     };
+    defer d.close();
 
     try self.dir_content_sub_dir.populate(&d, false);
-    self.sequence_parser.parse_sequence(
+    try self.sequence_parser.parse_sequence(
         self.dir_content_sub_dir.get_slice(),
         &self.sequence_info_array_sub_dir,
     );

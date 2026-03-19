@@ -56,7 +56,7 @@ pub fn parse_sequence(
     self: *Self,
     dir_entry_slice: []const DirEntry,
     sequence_info_array: *SequenceInfoArray,
-) void {
+) !void {
     self.reset();
     self.sequence_info_array = sequence_info_array;
     self.sequence_info_array.reset();
@@ -64,7 +64,7 @@ pub fn parse_sequence(
     self._i = 1;
     self._j = 0;
 
-    if (dir_entry_slice.len == 0) return; // FIXME: actually: 2! otherwise, buffer_2 can stay undefined...
+    if (dir_entry_slice.len < 2) return;
 
     self._dir_entry_slice = dir_entry_slice;
 
@@ -75,19 +75,17 @@ pub fn parse_sequence(
     while (self._i < self._dir_entry_slice.len) {
         self._dir_entry_curr = self._dir_entry_slice[self._i];
         self._i += 1;
-        // std.debug.print("\n {s} : {d} : {any} \n", .{self._dir_entry_curr.name.get_slice(), self._i, self._parsing_seq_state});
         switch (self._parsing_seq_state) {
-            .LookingForSequence => self._state_looking_for_sequence(),
-            .ParsingSequence => self._state_parsing_sequence(),
+            .LookingForSequence => try self._state_looking_for_sequence(),
+            .ParsingSequence => try self._state_parsing_sequence(),
         }
     }
 
     if (self._parsing_seq_state == ParsingSeqState.ParsingSequence) self._j += 1;
     self.sequence_info_array.array_seq_info.len = self._j;
 
-    for (self.sequence_info_array.array_seq_info.get_slice(), 0..) |seq_info, k| {
-        self.sequence_info_array.array_seq_start_idx.array[k] = seq_info.idx_start;
-        self.sequence_info_array.array_seq_start_idx.len += 1;
+    for (self.sequence_info_array.array_seq_info.get_slice()) |seq_info| {
+        try self.sequence_info_array.array_seq_start_idx.append(seq_info.idx_start);
     }
     std.mem.sort(
         usize,
@@ -95,10 +93,9 @@ pub fn parse_sequence(
         {},
         comptime std.sort.asc(usize),
     );
-    self.sequence_info_array.array_seq_start_idx.len = self._j;
 }
 
-fn _state_looking_for_sequence(self: *Self) void {
+fn _state_looking_for_sequence(self: *Self) !void {
     switch (self._dir_entry_curr.kind) {
         .file => {
             self._dir_entry_buff_2 = self._dir_entry_curr;
@@ -108,6 +105,7 @@ fn _state_looking_for_sequence(self: *Self) void {
                 self._i - 2,
             );
             if (tmp != null) {
+                try self.sequence_info_array.array_seq_info.ensureCapacity(self._j + 1);
                 self.sequence_info_array.array_seq_info.array[self._j] = tmp.?;
                 self._parsing_seq_state = ParsingSeqState.ParsingSequence;
             } else {
@@ -121,7 +119,7 @@ fn _state_looking_for_sequence(self: *Self) void {
     }
 }
 
-fn _state_parsing_sequence(self: *Self) void {
+fn _state_parsing_sequence(self: *Self) !void {
     var finish_parsing_sequence = false;
     var last = &self.sequence_info_array.array_seq_info.array[self._j];
     switch (self._dir_entry_curr.kind) {
@@ -142,9 +140,9 @@ fn _state_parsing_sequence(self: *Self) void {
         },
     }
     if (finish_parsing_sequence) {
-        self._parsing_seq_state = ParsingSeqState.LookingForSequence;
-        self._state_looking_for_sequence();
         self._j += 1;
+        self._parsing_seq_state = ParsingSeqState.LookingForSequence;
+        try self._state_looking_for_sequence();
     }
 }
 fn _build_seq_info_if_seq(
@@ -166,14 +164,15 @@ fn _build_seq_info_if_seq(
     var ret = SequenceInfo.init();
     ret.pattern_before.append_string(pattern_before);
     ret.pattern_after.append_string(pattern_after);
-    ret.sequence_split.add_value(sequence_result.seq_number_filenam_1);
-    ret.sequence_split.add_value(sequence_result.seq_number_filenam_2);
+    ret.sequence_split.add_value(sequence_result.seq_number_filename_1);
+    ret.sequence_split.add_value(sequence_result.seq_number_filename_2);
     ret.idx_start = i_start;
     return ret;
 }
 
 test "seq_1" {
-    var dir_content = DirContent.init();
+    var dir_content = try DirContent.init(std.testing.allocator);
+    defer dir_content.deinit();
 
     const content_dir = [_][]const u8{
         "0039_1830-ani-blocking2-v001.ma",
@@ -203,11 +202,59 @@ test "seq_1" {
         });
     }
 
-    var sequence_array = SequenceInfoArray.init();
+    var sequence_array = try SequenceInfoArray.init(std.testing.allocator);
+    defer sequence_array.deinit();
     var sequence_parser = Self.init();
-    sequence_parser.parse_sequence(dir_content.get_slice(), &sequence_array);
-    // for (sequence_array.get_slice()) |i| {
-    //     i.print_debug();
-    // }
-    //TODO: finish this test.
+    try sequence_parser.parse_sequence(dir_content.get_slice(), &sequence_array);
+
+    // Should detect 5 sequences: blocking2(2), blocking(5), polish(4), spline(3), debug(2)
+    try std.testing.expectEqual(@as(usize, 5), sequence_array.array_seq_info.len);
+
+    // blocking2: v001-v002
+    const seq_0 = sequence_array.array_seq_info.array[0];
+    try std.testing.expectEqualSlices(u8, "0039_1830-ani-blocking2-v", seq_0.pattern_before.get_slice());
+    try std.testing.expectEqualSlices(u8, ".ma", seq_0.pattern_after.get_slice());
+    try std.testing.expectEqual(@as(usize, 2), seq_0.sequence_split.compute_len());
+
+    // blocking: v001-v005
+    const seq_1 = sequence_array.array_seq_info.array[1];
+    try std.testing.expectEqualSlices(u8, "0039_1830-ani-blocking-v", seq_1.pattern_before.get_slice());
+    try std.testing.expectEqual(@as(usize, 5), seq_1.sequence_split.compute_len());
+
+    // polish: v000-v003
+    const seq_2 = sequence_array.array_seq_info.array[2];
+    try std.testing.expectEqualSlices(u8, "0039_1830-ani-polish-v", seq_2.pattern_before.get_slice());
+    try std.testing.expectEqual(@as(usize, 4), seq_2.sequence_split.compute_len());
+
+    // spline: v001-v003
+    const seq_3 = sequence_array.array_seq_info.array[3];
+    try std.testing.expectEqualSlices(u8, "0039_1830-ani-spline-v", seq_3.pattern_before.get_slice());
+    try std.testing.expectEqual(@as(usize, 3), seq_3.sequence_split.compute_len());
+
+    // debug: 1-2
+    const seq_4 = sequence_array.array_seq_info.array[4];
+    try std.testing.expectEqualSlices(u8, "debug_", seq_4.pattern_before.get_slice());
+    try std.testing.expectEqualSlices(u8, ".exr", seq_4.pattern_after.get_slice());
+    try std.testing.expectEqual(@as(usize, 2), seq_4.sequence_split.compute_len());
+}
+
+test "seq_empty_and_single" {
+    var dir_content = try DirContent.init(std.testing.allocator);
+    defer dir_content.deinit();
+
+    var sequence_array = try SequenceInfoArray.init(std.testing.allocator);
+    defer sequence_array.deinit();
+    var sequence_parser = Self.init();
+
+    // Empty directory
+    try sequence_parser.parse_sequence(dir_content.get_slice(), &sequence_array);
+    try std.testing.expectEqual(@as(usize, 0), sequence_array.array_seq_info.len);
+
+    // Single file
+    _ = dir_content.append(DirEntry{
+        .name = StringLongUnicode.init_from_slice("single_file.exr"),
+        .kind = .file,
+    });
+    try sequence_parser.parse_sequence(dir_content.get_slice(), &sequence_array);
+    try std.testing.expectEqual(@as(usize, 0), sequence_array.array_seq_info.len);
 }

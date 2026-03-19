@@ -2,7 +2,7 @@ const std = @import("std");
 const File = std.fs.File;
 const String = @import("data_structure/string.zig").String;
 
-const LineBuffer = String(512, u8);
+const LineBuffer = String(1024, u8);
 const OUT_BUF_SIZE = 4096;
 
 const Self = @This();

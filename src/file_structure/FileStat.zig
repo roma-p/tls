@@ -88,17 +88,13 @@ pub fn init(dir: *Dir, path: []const u8, uid_cache: *UidCache) !Self {
         ret.owner.append_string(cached_username.get_slice());
     } else {
         const psswd = c.getpwuid(stat.uid);
-        const name_c_type: [*c]u8 = psswd.*.pw_name;
-        const name_z_type = std.mem.span(@as([*:0]const u8, name_c_type));
-
-        var i: usize = 0;
-        const max_len = ret.owner.get_max_len();
-        while (i < max_len) : (i += 1) {
-            if (name_z_type[i] == 0) break;
-            if (i == max_len) break;
-            ret.owner.append_char(name_z_type[i]);
+        if (psswd != null) {
+            const name_c_type: [*c]u8 = psswd.*.pw_name;
+            const name_z_type = std.mem.span(@as([*:0]const u8, name_c_type));
+            ret.owner.append_string(name_z_type);
+        } else {
+            ret.owner.append_string("?");
         }
-
         uid_cache.insert(stat.uid, ret.owner);
     }
 
@@ -108,29 +104,20 @@ pub fn init(dir: *Dir, path: []const u8, uid_cache: *UidCache) !Self {
     return ret;
 }
 
-pub fn _has_any_extended_attributes(path: []const u8) !bool {
-    var buf: [std.fs.max_path_bytes + 1]u8 = undefined;
-    if (path.len > std.fs.max_path_bytes) return false;
-    @memcpy(buf[0..path.len], path);
-    buf[path.len] = 0;
-    const c_path: [*:0]const u8 = buf[0..path.len :0];
+fn _has_any_extended_attributes(path: []const u8) !bool {
+    const c_path = std.posix.toPosixPath(path) catch return false;
 
     const result = c.listxattr(
-        c_path,
+        &c_path,
         null, // Don't retrieve actual attributes
         0, // Get required buffer size
         0, // options flags.
     );
 
-    if (result > 0) {
-        return true;
-    } else if (result == 0) {
-        return false;
-    } else return false; // FIXE ME: masking errors...(if -1)
-
+    return result > 0;
 }
 
-pub fn _fill_extension(filename: []const u8, extString: *StringExt) void {
+fn _fill_extension(filename: []const u8, extString: *StringExt) void {
     var i: usize = 1;
     var j: usize = 0;
     var dot_found: bool = false;

@@ -92,7 +92,7 @@ fn collect(
     }
     if (buffer_isolated_files_i > buffer_isolated_files.len) {
         str_out.append_string("!!");
-    } else {
+    } else if (buffer_isolated_files_i > 0) {
         str_out.append_char('!');
         var k: usize = 0;
         while (k < buffer_isolated_files_i) : (k += 1) {

@@ -5,8 +5,8 @@ const fs = std.fs;
 pub const ResultCheckIsSequenceUsingTwoFilenames = struct {
     number_start_idx: usize, // idx of filename_1 and _2 where number start.
     number_end_idx_filename_1: usize, // idx of filename_1 and _2 where number start.
-    seq_number_filenam_1: u16, // sequence number on filename_1
-    seq_number_filenam_2: u16, // sequence number on filename_2
+    seq_number_filename_1: u16, // sequence number on filename_1
+    seq_number_filename_2: u16, // sequence number on filename_2
 };
 
 pub fn check_is_sequence_using_two_filenames(
@@ -75,8 +75,8 @@ pub fn check_is_sequence_using_two_filenames(
     return ResultCheckIsSequenceUsingTwoFilenames{
         .number_start_idx = diff_number_start_idx,
         .number_end_idx_filename_1 = diff_number_end_idx_filename_1,
-        .seq_number_filenam_1 = number_1,
-        .seq_number_filenam_2 = number_2,
+        .seq_number_filename_1 = number_1,
+        .seq_number_filename_2 = number_2,
     };
 }
 
@@ -103,7 +103,7 @@ pub fn check_file_belong_to_sequence(
             break;
         }
     }
-    const ret = std.fmt.parseInt(u16, filename[pattern_before.len..i], 10) catch unreachable;
+    const ret = std.fmt.parseInt(u16, filename[pattern_before.len..i], 10) catch return null;
     if (filename.len - i != pattern_after.len) {
         return null;
     }
@@ -154,8 +154,8 @@ test "check_is_sequence_using_two_filenames" {
         ResultCheckIsSequenceUsingTwoFilenames{
             .number_start_idx = 9,
             .number_end_idx_filename_1 = 12,
-            .seq_number_filenam_1 = 1,
-            .seq_number_filenam_2 = 2,
+            .seq_number_filename_1 = 1,
+            .seq_number_filename_2 = 2,
         },
         check_is_sequence_using_two_filenames(
             "trucv001.001.exr",
@@ -167,8 +167,8 @@ test "check_is_sequence_using_two_filenames" {
         ResultCheckIsSequenceUsingTwoFilenames{
             .number_start_idx = 9,
             .number_end_idx_filename_1 = 12,
-            .seq_number_filenam_1 = 1,
-            .seq_number_filenam_2 = 2,
+            .seq_number_filename_1 = 1,
+            .seq_number_filename_2 = 2,
         },
         check_is_sequence_using_two_filenames(
             "trucv001.001.exr",
@@ -180,8 +180,8 @@ test "check_is_sequence_using_two_filenames" {
         ResultCheckIsSequenceUsingTwoFilenames{
             .number_start_idx = 9,
             .number_end_idx_filename_1 = 12,
-            .seq_number_filenam_1 = 1,
-            .seq_number_filenam_2 = 10,
+            .seq_number_filename_1 = 1,
+            .seq_number_filename_2 = 10,
         },
         check_is_sequence_using_two_filenames(
             "trucv001.001.exr",
@@ -193,8 +193,8 @@ test "check_is_sequence_using_two_filenames" {
         ResultCheckIsSequenceUsingTwoFilenames{
             .number_start_idx = 9,
             .number_end_idx_filename_1 = 10,
-            .seq_number_filenam_1 = 4,
-            .seq_number_filenam_2 = 150,
+            .seq_number_filename_1 = 4,
+            .seq_number_filename_2 = 150,
         },
         check_is_sequence_using_two_filenames(
             "trucv001.4.exr",
@@ -227,8 +227,8 @@ test "check_is_sequence_using_two_filenames" {
         ResultCheckIsSequenceUsingTwoFilenames{
             .number_start_idx = 0,
             .number_end_idx_filename_1 = 3,
-            .seq_number_filenam_1 = 1,
-            .seq_number_filenam_2 = 2,
+            .seq_number_filename_1 = 1,
+            .seq_number_filename_2 = 2,
         },
         check_is_sequence_using_two_filenames(
             "001.trucv001.001.exr",
@@ -248,8 +248,8 @@ test "check_is_sequence_using_two_filenames" {
         ResultCheckIsSequenceUsingTwoFilenames{
             .number_start_idx = 17,
             .number_end_idx_filename_1 = 21,
-            .seq_number_filenam_1 = 40,
-            .seq_number_filenam_2 = 41,
+            .seq_number_filename_1 = 40,
+            .seq_number_filename_2 = 41,
         },
         check_is_sequence_using_two_filenames(
             "089_06_surf-v001.0040.exr",
@@ -261,8 +261,8 @@ test "check_is_sequence_using_two_filenames" {
         ResultCheckIsSequenceUsingTwoFilenames{
             .number_start_idx = 13,
             .number_end_idx_filename_1 = 16,
-            .seq_number_filenam_1 = 1,
-            .seq_number_filenam_2 = 2,
+            .seq_number_filename_1 = 1,
+            .seq_number_filename_2 = 2,
         },
         check_is_sequence_using_two_filenames(
             "089_06_surf-v001.ma",
