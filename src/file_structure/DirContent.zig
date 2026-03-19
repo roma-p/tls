@@ -121,7 +121,12 @@ fn _less_than(_: void, lhs: DirEntry, rhs: DirEntry) bool {
     const a = lhs.name.get_slice();
     const b = rhs.name.get_slice();
 
-    // Sort by extension first so same-extension files are adjacent (enables sequence grouping)
+    // Dotfiles/dotdirs sort before non-dotfiles
+    const a_is_dot = a.len > 0 and a[0] == '.';
+    const b_is_dot = b.len > 0 and b[0] == '.';
+    if (a_is_dot != b_is_dot) return a_is_dot;
+
+    // Sort by extension so same-extension files are adjacent (enables sequence grouping)
     const ext_a = _get_extension(a);
     const ext_b = _get_extension(b);
     const ext_ord = _natural_order(ext_a, ext_b);
