@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const os = std.os;
 const posix = std.posix;
 const PosixStat = std.posix.Stat;
@@ -107,12 +108,11 @@ pub fn init(dir: *Dir, path: []const u8, uid_cache: *UidCache) !Self {
 fn _has_any_extended_attributes(path: []const u8) !bool {
     const c_path = std.posix.toPosixPath(path) catch return false;
 
-    const result = c.listxattr(
-        &c_path,
-        null, // Don't retrieve actual attributes
-        0, // Get required buffer size
-        0, // options flags.
-    );
+    const result = switch (builtin.os.tag) {
+        .macos => c.listxattr(&c_path, null, 0, 0),
+        .linux => c.listxattr(&c_path, null, 0),
+        else => return false,
+    };
 
     return result > 0;
 }
