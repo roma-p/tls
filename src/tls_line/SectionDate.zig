@@ -11,7 +11,7 @@ month: [3]u8,
 year_or_hour: [5]u8,
 ambiguous: Ambiguous,
 _now: DateTime,
-_string_buffer: string.StringShortAscii,
+_string_buffer: string.StringShort,
 
 const DayString = string.String(2, u8);
 
@@ -30,7 +30,7 @@ pub fn init() Self {
         .year_or_hour = [_]u8{ ' ', ' ', ' ', ' ', ' ' },
         .ambiguous = .OnlyHourMayDiffer,
         ._now = DateTime.init(@intCast(std.time.timestamp())),
-        ._string_buffer = string.StringShortAscii.init(),
+        ._string_buffer = string.StringShort.init(),
     };
 }
 
@@ -49,7 +49,7 @@ pub fn deinit(self: *Self) void {
 pub fn init_from_epoch(
     epoch: u64,
     now: DateTime,
-    string_buffer: *string.StringShortAscii,
+    string_buffer: *string.StringShort,
 ) Self {
     const date = DateTime.init(epoch);
     const is_older_by_a_year = Self._is_date_older_by_a_year(now, date);

@@ -6,13 +6,13 @@ const Dir = std.fs.Dir;
 const constants = @import("../constants.zig");
 const string = @import("../data_structure/string.zig");
 const StringExt = string.StringExt;
-const StringShortUnicode = string.StringShortUnicode;
+const StringShort = string.StringShort;
 
 const MAX_STR_LEN_EXT = string.MAX_STR_LEN_EXT;
 
 const Self = @This();
 
-owner: StringShortUnicode,
+owner: StringShort,
 mode: u32,
 size: u64,
 mtime: u64,
@@ -29,7 +29,7 @@ pub const UidCache = struct {
 
     const CacheEntry = struct {
         uid: u32,
-        username: StringShortUnicode,
+        username: StringShort,
         valid: bool,
     };
 
@@ -44,14 +44,14 @@ pub const UidCache = struct {
         for (&cache.entries) |*entry| {
             entry.* = CacheEntry{
                 .uid = 0,
-                .username = StringShortUnicode.init(),
+                .username = StringShort.init(),
                 .valid = false,
             };
         }
         return cache;
     }
 
-    pub fn lookup(self: *UidCache, uid: u32) ?*const StringShortUnicode {
+    pub fn lookup(self: *UidCache, uid: u32) ?*const StringShort {
         for (self.entries[0..self.count]) |*entry| {
             if (entry.valid and entry.uid == uid) {
                 return &entry.username;
@@ -60,7 +60,7 @@ pub const UidCache = struct {
         return null;
     }
 
-    pub fn insert(self: *UidCache, uid: u32, username: StringShortUnicode) void {
+    pub fn insert(self: *UidCache, uid: u32, username: StringShort) void {
         if (self.count >= MAX_CACHE_ENTRIES) return;
 
         self.entries[self.count] = CacheEntry{
@@ -76,7 +76,7 @@ pub fn init(dir: *Dir, path: []const u8, uid_cache: *UidCache) !Self {
     const stat = try posix.fstatat(dir.fd, path, posix.AT.SYMLINK_NOFOLLOW);
     const mtime = stat.mtime();
     var ret = Self{
-        .owner = StringShortUnicode.init(),
+        .owner = StringShort.init(),
         .mode = stat.mode,
         .size = @bitCast(stat.size),
         .mtime = @intCast(@as(i128, mtime.sec)),

@@ -5,12 +5,9 @@ pub const MAX_STR_LEN_ENTRY = 256;
 pub const MAX_STR_LEN_OWNER = 50;
 pub const MAX_STR_LEN_EXT = 16;
 
-// not yet unicode...
-
 pub const StringExt = String(MAX_STR_LEN_EXT, u8);
-pub const StringLongUnicode = String(MAX_STR_LEN_ENTRY, u8);
-pub const StringShortUnicode = String(MAX_STR_LEN_OWNER, u8);
-pub const StringShortAscii = String(MAX_STR_LEN_OWNER, u8);
+pub const StringLong = String(MAX_STR_LEN_ENTRY, u8);
+pub const StringShort = String(MAX_STR_LEN_OWNER, u8);
 
 pub fn String(comptime max_len: usize, comptime string_type: type) type {
     return struct {

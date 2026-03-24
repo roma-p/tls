@@ -14,16 +14,16 @@ const Self = @This();
 permissions: SectionPermissions,
 has_xattr: bool,
 size: SectionSize,
-owner: string.StringShortUnicode,
+owner: string.StringShort,
 date: SectionDate,
-entry_name: string.StringLongUnicode,
+entry_name: string.StringLong,
 entry_kind: FileKind,
 ext: string.StringExt,
 extra: ExtraData,
 extra_type: ExtraType,
 // TODO: has_extra_file
 
-_string_buffer: string.StringShortAscii,
+_string_buffer: string.StringShort,
 _term_writer: TermWriter,
 _max_owner_len: usize,
 
@@ -35,9 +35,9 @@ pub const ExtraType = enum {
 
 pub const ExtraData = union(ExtraType) {
     None: void,
-    Sequence: string.StringLongUnicode,
+    Sequence: string.StringLong,
     Symlink:  struct {
-        target: string.StringLongUnicode,
+        target: string.StringLong,
         target_exists: bool,
     },
 
@@ -59,14 +59,14 @@ pub fn init() Self {
         .permissions = SectionPermissions.init(),
         .has_xattr = false,
         .size = SectionSize.init(),
-        .owner = string.StringShortUnicode.init(),
+        .owner = string.StringShort.init(),
         .date = SectionDate.init(),
-        .entry_name = string.StringLongUnicode.init(),
+        .entry_name = string.StringLong.init(),
         .entry_kind = undefined,
         .extra = undefined,
         .extra_type = undefined,
         .ext = string.StringExt.init(),
-        ._string_buffer = string.StringShortAscii.init(),
+        ._string_buffer = string.StringShort.init(),
         ._term_writer = TermWriter.init(),
         ._max_owner_len = 0,
     };
@@ -154,7 +154,7 @@ pub fn display_size(self: *Self) !void {
     }
 }
 
-pub fn update_owner(self: *Self, other_owner: *const string.StringShortUnicode) void {
+pub fn update_owner(self: *Self, other_owner: *const string.StringShort) void {
     if (!self.owner.check_is_equal(other_owner)) {
         self.owner.set_string("?");
     }

@@ -5,7 +5,7 @@ const SequenceInfoArray = @import("SequenceInfoArray.zig");
 const sequence_utils = @import("sequence_utils.zig");
 const DirContent = @import("../file_structure/DirContent.zig");
 const DirEntry = DirContent.DirEntry;
-const StringLongUnicode = @import("../data_structure/string.zig").StringLongUnicode;
+const StringLong = @import("../data_structure/string.zig").StringLong;
 
 const Self = @This();
 
@@ -197,7 +197,7 @@ test "seq_1" {
 
     for (content_dir) |de| {
         _ = dir_content.append(DirEntry{
-            .name = StringLongUnicode.init_from_slice(de),
+            .name = StringLong.init_from_slice(de),
             .kind = .file,
         });
     }
@@ -252,7 +252,7 @@ test "seq_empty_and_single" {
 
     // Single file
     _ = dir_content.append(DirEntry{
-        .name = StringLongUnicode.init_from_slice("single_file.exr"),
+        .name = StringLong.init_from_slice("single_file.exr"),
         .kind = .file,
     });
     try sequence_parser.parse_sequence(dir_content.get_slice(), &sequence_array);

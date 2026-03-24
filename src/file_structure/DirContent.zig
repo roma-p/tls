@@ -7,7 +7,7 @@ const FileStat = @import("FileStat.zig");
 const fs = std.fs;
 const Dir = fs.Dir;
 const FileKind = fs.File.Kind;
-const StringLongUnicode = string.StringLongUnicode;
+const StringLong = string.StringLong;
 
 const Self = @This();
 
@@ -19,12 +19,12 @@ max_owner_len: usize,
 allocator: std.mem.Allocator,
 
 pub const DirEntry = struct {
-    name: StringLongUnicode,
+    name: StringLong,
     kind: FileKind,
 };
 
 const default_dir_entry = DirEntry{
-    .name = StringLongUnicode.init(),
+    .name = StringLong.init(),
     .kind = .file,
 };
 
@@ -59,10 +59,6 @@ pub fn deinit(self: *Self) void {
     self.dir_entry_array.deinit();
     self.file_stat_array.deinit();
     self.* = undefined;
-}
-
-pub fn append(self: *Self, dir_entry: DirEntry) bool {
-    return self.dir_entry_array.append(dir_entry);
 }
 
 pub fn populate(self: *Self, dir: *Dir, eval_file_stat: bool) !void {

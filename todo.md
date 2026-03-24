@@ -2,6 +2,10 @@
 # tls
 
 ## Code Reorg
+un seul sequence split pr toute l'app.
+_append_number_buffer: [16]string_type, -> a la string (not thread safe)
+
+## Code Reorg
 
 - [X] compile for zig 0.14? 
 - [ ] profile, make it faster.

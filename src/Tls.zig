@@ -187,7 +187,7 @@ fn _process_single_entry(self: *Self) !void {
 
             self.tls_line.extra_type = TlsLine.ExtraType.Symlink;
             self.tls_line.extra = .{ .Symlink = .{
-                    .target = string.StringLongUnicode.init_from_slice(target),
+                    .target = string.StringLong.init_from_slice(target),
                     .target_exists = if (self.dir_fs.access(target, .{})) true else |_| false,
                 },
             };
@@ -228,7 +228,7 @@ fn _process_single_dir(self: *Self) !void {
         const seq = seq_or_null.?;
         self.tls_line.extra_type = TlsLine.ExtraType.Sequence;
         self.tls_line.extra.reset();
-        self.tls_line.extra = .{ .Sequence = string.StringLongUnicode.init() };
+        self.tls_line.extra = .{ .Sequence = string.StringLong.init() };
         format_sequence.format_sequence(
             seq.pattern_before.get_slice(),
             seq.pattern_after.get_slice(),

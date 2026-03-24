@@ -8,7 +8,7 @@ pub fn format_sequence(
     pattern_after: []const u8,
     ptr_sequence_array: *const [constants.MAX_LEN_FOR_SEQUENCE_SPLIT]u16,
     split_nbr: usize,
-    str_out: *string.StringLongUnicode,
+    str_out: *string.StringLong,
 ) void {
     str_out.append_string(pattern_before);
     format_sequence_number_part(ptr_sequence_array, split_nbr, str_out);
@@ -18,7 +18,7 @@ pub fn format_sequence(
 fn format_sequence_number_part(
     ptr_sequence_array: *const [constants.MAX_LEN_FOR_SEQUENCE_SPLIT]u16,
     split_nbr: usize,
-    str_out: *string.StringLongUnicode,
+    str_out: *string.StringLong,
 ) void {
     if (ptr_sequence_array.*.len < 2) return;
     if (split_nbr < 1) return;
@@ -77,7 +77,7 @@ fn format_sequence_number_part(
 }
 
 fn collect(
-    str_out: *string.StringLongUnicode,
+    str_out: *string.StringLong,
     first_file: u16,
     last_file: u16,
     buffer_isolated_files: *[constants.MAX_DISPLAYED_ISOLATED_FILE]u16,
@@ -105,7 +105,7 @@ fn collect(
 }
 
 test "format_sequence_number_part" {
-    var terminal_string_output = string.StringLongUnicode.init();
+    var terminal_string_output = string.StringLong.init();
 
     var arr_2 = [_]u16{ 3, 2, 10, 4 } ++ [_]u16{0} ** (constants.MAX_LEN_FOR_SEQUENCE_SPLIT - 4);
     format_sequence_number_part(&arr_2, 2, &terminal_string_output);
@@ -163,7 +163,7 @@ test "format_sequence_number_part" {
 }
 
 test "format_sequence" {
-    var terminal_string_output = string.StringLongUnicode.init();
+    var terminal_string_output = string.StringLong.init();
     var arr_2 = [_]u16{ 3, 2, 10, 4 } ++ [_]u16{0} ** (constants.MAX_LEN_FOR_SEQUENCE_SPLIT - 4);
     const pattern_before = "089_06_surf-v001.";
     const pattern_after = ".exr";
