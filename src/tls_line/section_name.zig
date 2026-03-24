@@ -7,12 +7,14 @@ pub const EntryColor = enum {
     Dcc,
     Image,
     Cache,
+    Video,
 
     // Add extension to type of file here.
     const type_to_ext = .{
         .Image = .{ "exr", "jpg", "jpeg", "png" },
         .Dcc   = .{ "ma",  "nk",  "hip",  "c4d", "zpr"},
         .Cache = .{ "ass", "abc", "fbx",  "usd", },
+        .Video = .{ "mp4", "mkv", "mov",  "mpeg", },
     };
 
     // Assign coloring to a type of file here.
@@ -21,6 +23,7 @@ pub const EntryColor = enum {
             .Dcc => .Magenta,
             .Image => .Green,
             .Cache => .Red,
+            .Video => .Cyan,
         };
     }
 
