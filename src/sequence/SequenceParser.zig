@@ -97,7 +97,7 @@ pub fn parse_sequence(
 
 fn _state_looking_for_sequence(self: *Self) !void {
     switch (self._dir_entry_curr.kind) {
-        .file => {
+        .file, .unknown => {
             self._dir_entry_buff_2 = self._dir_entry_curr;
             const tmp = _build_seq_info_if_seq(
                 self._dir_entry_buff_1.name.get_slice(),
@@ -123,7 +123,7 @@ fn _state_parsing_sequence(self: *Self) !void {
     var finish_parsing_sequence = false;
     var last = &self.sequence_info_array.array_seq_info.array[self._j];
     switch (self._dir_entry_curr.kind) {
-        .file => {
+        .file, .unknown => {
             const seq_nb = sequence_utils.check_file_belong_to_sequence(
                 self._dir_entry_curr.name.get_slice(),
                 last.pattern_before.get_slice(),
@@ -196,7 +196,7 @@ test "seq_1" {
     };
 
     for (content_dir) |de| {
-        _ = dir_content.append(DirEntry{
+        try dir_content.dir_entry_array.append(DirEntry{
             .name = StringLong.init_from_slice(de),
             .kind = .file,
         });
@@ -238,6 +238,47 @@ test "seq_1" {
     try std.testing.expectEqual(@as(usize, 2), seq_4.sequence_split.compute_len());
 }
 
+test "seq_lion_render" {
+    var dir_content = try DirContent.init(std.testing.allocator);
+    defer dir_content.deinit();
+
+    const base = "210_lion_010-dgc-cut01-v002-rec709.";
+    const ext = ".jpg";
+    var buf: [256]u8 = undefined;
+
+    // Add frames 1103-1200
+    var frame: u16 = 1103;
+    while (frame <= 1200) : (frame += 1) {
+        const name = std.fmt.bufPrint(&buf, "{s}{d}{s}", .{ base, frame, ext }) catch unreachable;
+        try dir_content.dir_entry_array.append(DirEntry{
+            .name = StringLong.init_from_slice(name),
+            .kind = .file,
+        });
+    }
+
+    var sequence_array = try SequenceInfoArray.init(std.testing.allocator);
+    defer sequence_array.deinit();
+    var sequence_parser = Self.init();
+    try sequence_parser.parse_sequence(dir_content.get_slice(), &sequence_array);
+
+    // Should detect 1 sequence of 98 frames
+    std.debug.print("\nDetected sequences: {d}\n", .{sequence_array.array_seq_info.len});
+    for (sequence_array.array_seq_info.array[0..sequence_array.array_seq_info.len], 0..) |seq, i| {
+        std.debug.print("  seq[{d}]: {s}[...]{s} len={d}\n", .{
+            i,
+            seq.pattern_before.get_slice(),
+            seq.pattern_after.get_slice(),
+            seq.sequence_split.compute_len(),
+        });
+    }
+
+    try std.testing.expectEqual(@as(usize, 1), sequence_array.array_seq_info.len);
+    const seq = sequence_array.array_seq_info.array[0];
+    try std.testing.expectEqualSlices(u8, "210_lion_010-dgc-cut01-v002-rec709.", seq.pattern_before.get_slice());
+    try std.testing.expectEqualSlices(u8, ".jpg", seq.pattern_after.get_slice());
+    try std.testing.expectEqual(@as(usize, 98), seq.sequence_split.compute_len());
+}
+
 test "seq_empty_and_single" {
     var dir_content = try DirContent.init(std.testing.allocator);
     defer dir_content.deinit();
@@ -251,7 +292,7 @@ test "seq_empty_and_single" {
     try std.testing.expectEqual(@as(usize, 0), sequence_array.array_seq_info.len);
 
     // Single file
-    _ = dir_content.append(DirEntry{
+    try dir_content.dir_entry_array.append(DirEntry{
         .name = StringLong.init_from_slice("single_file.exr"),
         .kind = .file,
     });

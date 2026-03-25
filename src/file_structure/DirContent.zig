@@ -91,6 +91,10 @@ pub fn populate(self: *Self, dir: *Dir, eval_file_stat: bool) !void {
             continue;
         };
         self.dir_entry_array.array[j] = c;
+        // On NFS/XFS, readdir returns DT_UNKNOWN. Resolve from stat mode.
+        if (self.dir_entry_array.array[j].kind == .unknown) {
+            self.dir_entry_array.array[j].kind = _kind_from_mode(file_stat.mode);
+        }
         try self.file_stat_array.append(file_stat);
         const owner_len = file_stat.owner._array.len;
         if (owner_len > self.max_owner_len) {
@@ -130,6 +134,19 @@ fn _less_than(_: void, lhs: DirEntry, rhs: DirEntry) bool {
 
     // Same extension: natural sort by full name
     return _natural_order(a, b) == .lt;
+}
+
+fn _kind_from_mode(mode: u32) FileKind {
+    return switch (mode & 0o170000) {
+        0o140000 => .unix_domain_socket,
+        0o120000 => .sym_link,
+        0o100000 => .file,
+        0o060000 => .block_device,
+        0o040000 => .directory,
+        0o020000 => .character_device,
+        0o010000 => .named_pipe,
+        else => .unknown,
+    };
 }
 
 fn _get_extension(name: []const u8) []const u8 {
