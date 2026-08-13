@@ -15,6 +15,7 @@ _dir_entry_slice: []const DirEntry,
 _dir_entry_buff_1: DirEntry, // TODO: make this pointer.
 _dir_entry_buff_2: DirEntry, // TODO: make this pointer.
 _dir_entry_curr: DirEntry,
+_prev_entry_valid: bool, // buff_1 holds the file entry directly before curr
 _i: usize, // use for dir_entry_slice
 _j: usize, // use for sequence_info_array.array
 _parsing_seq_state: ParsingSeqState,
@@ -31,6 +32,7 @@ pub fn init() Self {
         ._dir_entry_buff_1 = undefined,
         ._dir_entry_buff_2 = undefined,
         ._dir_entry_curr = undefined,
+        ._prev_entry_valid = false,
         ._i = undefined,
         ._j = undefined,
         ._parsing_seq_state = undefined,
@@ -47,6 +49,7 @@ pub fn reset(self: *Self) void {
     self._dir_entry_buff_1 = undefined;
     self._dir_entry_buff_2 = undefined;
     self._dir_entry_curr = undefined;
+    self._prev_entry_valid = false;
     self._i = undefined;
     self._j = undefined;
     self._parsing_seq_state = undefined;
@@ -69,6 +72,13 @@ pub fn parse_sequence(
     self._dir_entry_slice = dir_entry_slice;
 
     self._dir_entry_buff_1 = dir_entry_slice[0];
+    self._prev_entry_valid = switch (dir_entry_slice[0].kind) {
+        .file, .unknown => true,
+        else => blk: {
+            self.sequence_info_array.has_extra_file = true;
+            break :blk false;
+        },
+    };
     self._dir_entry_buff_2 = undefined;
     self._parsing_seq_state = ParsingSeqState.LookingForSequence;
 
@@ -98,6 +108,14 @@ pub fn parse_sequence(
 fn _state_looking_for_sequence(self: *Self) !void {
     switch (self._dir_entry_curr.kind) {
         .file, .unknown => {
+            // only pair with the entry directly before this one: pairing
+            // across a gap would fold the in-between entries into the
+            // sequence when Tls replays [idx_start, idx_start + len).
+            if (!self._prev_entry_valid) {
+                self._dir_entry_buff_1 = self._dir_entry_curr;
+                self._prev_entry_valid = true;
+                return;
+            }
             self._dir_entry_buff_2 = self._dir_entry_curr;
             const tmp = _build_seq_info_if_seq(
                 self._dir_entry_buff_1.name.get_slice(),
@@ -114,6 +132,7 @@ fn _state_looking_for_sequence(self: *Self) !void {
             }
         },
         else => {
+            self._prev_entry_valid = false;
             self.sequence_info_array.has_extra_file = true;
         },
     }
@@ -142,7 +161,16 @@ fn _state_parsing_sequence(self: *Self) !void {
     if (finish_parsing_sequence) {
         self._j += 1;
         self._parsing_seq_state = ParsingSeqState.LookingForSequence;
-        try self._state_looking_for_sequence();
+        switch (self._dir_entry_curr.kind) {
+            .file, .unknown => {
+                self._dir_entry_buff_1 = self._dir_entry_curr;
+                self._prev_entry_valid = true;
+            },
+            else => {
+                self._prev_entry_valid = false;
+                self.sequence_info_array.has_extra_file = true;
+            },
+        }
     }
 }
 fn _build_seq_info_if_seq(
@@ -277,6 +305,86 @@ test "seq_lion_render" {
     try std.testing.expectEqualSlices(u8, "210_lion_010-dgc-cut01-v002-rec709.", seq.pattern_before.get_slice());
     try std.testing.expectEqualSlices(u8, ".jpg", seq.pattern_after.get_slice());
     try std.testing.expectEqual(@as(usize, 98), seq.sequence_split.compute_len());
+}
+
+test "seq_ignores_non_file_entries" {
+    var dir_content = try DirContent.init(std.testing.allocator);
+    defer dir_content.deinit();
+
+    // a directory sorted between two would-be sequence members must not be
+    // swallowed into a sequence (files are not adjacent)
+    try dir_content.dir_entry_array.append(DirEntry{
+        .name = StringLong.init_from_slice("b_001.ma"),
+        .kind = .file,
+    });
+    try dir_content.dir_entry_array.append(DirEntry{
+        .name = StringLong.init_from_slice("b_005.ma"),
+        .kind = .directory,
+    });
+    try dir_content.dir_entry_array.append(DirEntry{
+        .name = StringLong.init_from_slice("b_010.ma"),
+        .kind = .file,
+    });
+
+    var sequence_array = try SequenceInfoArray.init(std.testing.allocator);
+    defer sequence_array.deinit();
+    var sequence_parser = Self.init();
+    try sequence_parser.parse_sequence(dir_content.get_slice(), &sequence_array);
+    try std.testing.expectEqual(@as(usize, 0), sequence_array.array_seq_info.len);
+    try std.testing.expect(sequence_array.has_extra_file);
+}
+
+test "seq_starting_after_non_file_entry" {
+    var dir_content = try DirContent.init(std.testing.allocator);
+    defer dir_content.deinit();
+
+    // a directory whose name looks like a sequence member must not become
+    // the first member of a pair; the sequence starts at the first file
+    try dir_content.dir_entry_array.append(DirEntry{
+        .name = StringLong.init_from_slice("a_001.ma"),
+        .kind = .directory,
+    });
+    try dir_content.dir_entry_array.append(DirEntry{
+        .name = StringLong.init_from_slice("a_002.ma"),
+        .kind = .file,
+    });
+    try dir_content.dir_entry_array.append(DirEntry{
+        .name = StringLong.init_from_slice("a_003.ma"),
+        .kind = .file,
+    });
+
+    var sequence_array = try SequenceInfoArray.init(std.testing.allocator);
+    defer sequence_array.deinit();
+    var sequence_parser = Self.init();
+    try sequence_parser.parse_sequence(dir_content.get_slice(), &sequence_array);
+    try std.testing.expectEqual(@as(usize, 1), sequence_array.array_seq_info.len);
+    const seq = sequence_array.array_seq_info.array[0];
+    try std.testing.expectEqual(@as(usize, 1), seq.idx_start);
+    try std.testing.expectEqual(@as(usize, 2), seq.sequence_split.compute_len());
+}
+
+test "seq_no_overlap_after_sequence_ends" {
+    var dir_content = try DirContent.init(std.testing.allocator);
+    defer dir_content.deinit();
+
+    // when "x1.a" ends at x2.a1, x2.a1 must pair with x2.a2 (adjacent), not
+    // with the stale first member of the previous sequence
+    const names = [_][]const u8{ "x1.a1.ma", "x1.a2.ma", "x2.a1.ma", "x2.a2.ma" };
+    for (names) |n| {
+        try dir_content.dir_entry_array.append(DirEntry{
+            .name = StringLong.init_from_slice(n),
+            .kind = .file,
+        });
+    }
+
+    var sequence_array = try SequenceInfoArray.init(std.testing.allocator);
+    defer sequence_array.deinit();
+    var sequence_parser = Self.init();
+    try sequence_parser.parse_sequence(dir_content.get_slice(), &sequence_array);
+    try std.testing.expectEqual(@as(usize, 2), sequence_array.array_seq_info.len);
+    try std.testing.expectEqual(@as(usize, 0), sequence_array.array_seq_info.array[0].idx_start);
+    try std.testing.expectEqual(@as(usize, 2), sequence_array.array_seq_info.array[1].idx_start);
+    try std.testing.expectEqualSlices(u8, "x2.a", sequence_array.array_seq_info.array[1].pattern_before.get_slice());
 }
 
 test "seq_empty_and_single" {
