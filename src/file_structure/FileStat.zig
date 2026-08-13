@@ -99,18 +99,24 @@ pub fn init(dir: *Dir, path: []const u8, uid_cache: *UidCache) !Self {
         uid_cache.insert(stat.uid, ret.owner);
     }
 
-    if (try _has_any_extended_attributes(path)) ret.has_xattr = true;
+    if (_has_any_extended_attributes(dir, path)) ret.has_xattr = true;
     _fill_extension(path, &ret.ext);
 
     return ret;
 }
 
-fn _has_any_extended_attributes(path: []const u8) !bool {
-    const c_path = std.posix.toPosixPath(path) catch return false;
+fn _has_any_extended_attributes(dir: *Dir, path: []const u8) bool {
+    const fd = posix.openat(
+        dir.fd,
+        path,
+        .{ .NOFOLLOW = true, .NONBLOCK = true },
+        0,
+    ) catch return false;
+    defer posix.close(fd);
 
     const result = switch (builtin.os.tag) {
-        .macos => c.listxattr(&c_path, null, 0, 0),
-        .linux => c.listxattr(&c_path, null, 0),
+        .macos => c.flistxattr(fd, null, 0, 0),
+        .linux => c.flistxattr(fd, null, 0),
         else => return false,
     };
 
