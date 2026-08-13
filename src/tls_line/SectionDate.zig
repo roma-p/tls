@@ -1,212 +1,111 @@
 const std = @import("std");
-const string = @import("../data_structure/string.zig");
 const DateTime = @import("../DateTime.zig");
 const TermWriter = @import("../TermWriter.zig");
 
 const Self = @This();
 
-less_than_a_year_ago: u1,
-day: DayString,
-month: [3]u8,
-year_or_hour: [5]u8,
-ambiguous: Ambiguous,
+_date: DateTime,
 _now: DateTime,
-_string_buffer: string.StringShort,
+less_than_a_year_ago: bool,
+ambiguous: Ambiguous,
 
-const DayString = string.String(2, u8);
-
-const Ambiguous = enum {
-    UnknownYear,
-    UnknownMonth,
-    UnknownDay,
-    OnlyHourMayDiffer,
+const Ambiguous = enum(u3) {
+    None = 0,
+    Minute = 1,
+    Hour = 2,
+    Day = 3,
+    Month = 4,
+    Year = 5,
 };
 
 pub fn init() Self {
     return Self{
-        .less_than_a_year_ago = 0,
-        .day = DayString.init(),
-        .month = [_]u8{ ' ', ' ', ' ' },
-        .year_or_hour = [_]u8{ ' ', ' ', ' ', ' ', ' ' },
-        .ambiguous = .OnlyHourMayDiffer,
-        ._now = DateTime.init(@intCast(std.time.timestamp())),
-        ._string_buffer = string.StringShort.init(),
+        ._date = .{ .year = 1970, .month = 1, .day = 1, .hour = 0, .minute = 0 },
+        ._now = DateTime.init(std.time.timestamp()),
+        .less_than_a_year_ago = false,
+        .ambiguous = .None,
     };
 }
 
 pub fn reset(self: *Self) void {
-    self.less_than_a_year_ago = 0;
-    self.day.reset();
-    self.month = [_]u8{ ' ', ' ', ' ' };
-    self.year_or_hour = [_]u8{ ' ', ' ', ' ', ' ', ' ' };
-    self.ambiguous = .OnlyHourMayDiffer;
+    self.ambiguous = .None;
 }
 
 pub fn deinit(self: *Self) void {
     self.* = undefined;
 }
 
-pub fn init_from_epoch(
-    epoch: u64,
-    now: DateTime,
-    string_buffer: *string.StringShort,
-) Self {
-    const date = DateTime.init(epoch);
-    const is_older_by_a_year = Self._is_date_older_by_a_year(now, date);
-    var ret = Self.init();
-    ret.less_than_a_year_ago = if (is_older_by_a_year) 0 else 1;
-
-    string_buffer.reset();
-    string_buffer.append_number(u8, date.day, 2, null);
-    const day_slice = string_buffer.get_slice();
-
-    ret.day.set_string(day_slice);
-
-    const month_tmp = _conv_mont_id_to_trigram(date.month);
-    @memcpy(&ret.month, month_tmp[0..3]);
-
-    string_buffer.reset();
-    if (is_older_by_a_year) {
-        string_buffer.append_number(u16, date.year, null, null);
-        string_buffer.copy_to_arr(&ret.year_or_hour, null);
-    } else {
-        string_buffer.append_number(u8, date.hour, null, 2);
-        string_buffer.copy_to_arr(&ret.year_or_hour, null);
-        ret.year_or_hour[2] = ':';
-        string_buffer.reset();
-        string_buffer.append_number(u8, date.minute, null, 2);
-        string_buffer.copy_to_arr(&ret.year_or_hour, 3);
-        string_buffer.reset();
-    }
-    return ret;
+pub fn set_from_epoch(self: *Self, epoch: i64) void {
+    self._date = DateTime.init(epoch);
+    self.less_than_a_year_ago = !_is_date_older_by_a_year(self._now, self._date);
+    self.ambiguous = .None;
 }
 
-pub fn set_from_epoch(
-    self: *Self,
-    epoch: u64,
-) void {
-    const tmp = Self.init_from_epoch(epoch, self._now, &self._string_buffer);
-    self.less_than_a_year_ago = tmp.less_than_a_year_ago;
-    self.day = tmp.day;
-    self.month = tmp.month;
-    self.year_or_hour = tmp.year_or_hour;
+pub fn update_from_epoch(self: *Self, epoch: i64) void {
+    self._update_from_date(DateTime.init(epoch));
 }
 
-pub fn update_from_epoch(self: *Self, epoch: u64) void {
-    const other = Self.init_from_epoch(epoch, self._now, &self._string_buffer);
-    var tmp = self.check_diff_year(&other);
-    if (!tmp) tmp = self.check_diff_month(&other);
-    if (!tmp) tmp = self.check_diff_day(&other);
-    if (!tmp) tmp = self.check_diff_hour(&other);
-
-    switch (self.ambiguous) {
-        .UnknownYear => {
-            self.set_unknown_month();
-            self.set_unknown_day();
-            self.set_unknown_hour();
-        },
-        .UnknownMonth => {
-            self.set_unknown_month();
-            self.set_unknown_day();
-            self.set_unknown_hour();
-        },
-        .UnknownDay => {
-            self.set_unknown_hour();
-        },
-        else => {},
+fn _update_from_date(self: *Self, other: DateTime) void {
+    const level = _diff_level(self._date, other);
+    if (@intFromEnum(level) > @intFromEnum(self.ambiguous)) {
+        self.ambiguous = level;
     }
-}
-
-fn set_unknown_month(self: *Self) void {
-    self.month = [_]u8{ ' ', ' ', '?' };
-}
-
-fn set_unknown_day(self: *Self) void {
-    self.day.set_string(" ?");
-}
-
-fn set_unknown_hour(self: *Self) void {
-    self.year_or_hour = [_]u8{ '?', '?', ':', '?', '?' };
-}
-
-fn check_diff_year(self: *Self, other: *const Self) bool {
-    var diff_year = false;
-    if (self.less_than_a_year_ago == 1) {
-        if (other.less_than_a_year_ago == 0) {
-            diff_year = true;
-        } else {
-            var i: usize = 1;
-            while (i < 4) : (i += 1) {
-                if (!diff_year and self.year_or_hour[i] != other.year_or_hour[i]) {
-                    diff_year = true;
-                }
-                if (diff_year) {
-                    self.year_or_hour[i] = '?';
-                }
-            }
-        }
-    }
-    if (diff_year) {
-        self.ambiguous = .UnknownYear;
-    }
-    return diff_year;
-}
-
-fn check_diff_month(self: *Self, other: *const Self) bool {
-    var diff_month = false;
-    var i: usize = 0;
-    while (i < 3) : (i += 1) {
-        if (self.month[i] != other.month[i]) {
-            diff_month = true;
-            break;
-        }
-    }
-    if (diff_month) {
-        self.ambiguous = .UnknownMonth;
-    }
-    return diff_month;
-}
-
-fn check_diff_day(self: *Self, other: *const Self) bool {
-    var diff_day = false;
-    var j: usize = 0;
-    while (j < 2) : (j += 1) {
-        if (!diff_day and self.day._array.array[j] != other.day._array.array[j]) {
-            diff_day = true;
-        }
-        if (diff_day) {
-            self.day._array.array[j] = '?';
-        }
-    }
-    if (diff_day) {
-        self.ambiguous = .UnknownDay;
-    }
-    return diff_day;
-}
-
-fn check_diff_hour(self: *Self, other: *const Self) bool {
-    var diff_hour = false;
-    var k: usize = 0;
-    while (k < 5) : (k += 1) {
-        if (k == 2) continue;
-
-        if (!diff_hour and self.year_or_hour[k] != other.year_or_hour[k]) {
-            diff_hour = true;
-        }
-        if (diff_hour) {
-            self.year_or_hour[k] = '?';
-        }
-    }
-    return diff_hour;
 }
 
 pub fn display(self: *Self, writer: *TermWriter) !void {
     const color = TermWriter.Color.Blue;
-    writer.append_to_buffer_line(self.day.get_slice(), color);
+    var buf: [8]u8 = undefined;
+
+    if (self._is_unknown(.Day)) {
+        writer.append_to_buffer_line(" ?", color);
+    } else {
+        const day = std.fmt.bufPrint(&buf, "{d: >2}", .{self._date.day}) catch " ?";
+        writer.append_to_buffer_line(day, color);
+    }
     writer.append_to_buffer_line(" ", null);
-    writer.append_to_buffer_line(&self.month, color);
+
+    if (self._is_unknown(.Month)) {
+        writer.append_to_buffer_line("  ?", color);
+    } else {
+        writer.append_to_buffer_line(_conv_mont_id_to_trigram(self._date.month), color);
+    }
     writer.append_to_buffer_line(" ", null);
-    writer.append_to_buffer_line(&self.year_or_hour, color);
+
+    if (self.less_than_a_year_ago) {
+        if (self._is_unknown(.Hour)) {
+            writer.append_to_buffer_line("??:??", color);
+        } else if (self._is_unknown(.Minute)) {
+            const t = std.fmt.bufPrint(&buf, "{d:0>2}:??", .{self._date.hour}) catch "??:??";
+            writer.append_to_buffer_line(t, color);
+        } else {
+            const t = std.fmt.bufPrint(
+                &buf,
+                "{d:0>2}:{d:0>2}",
+                .{ self._date.hour, self._date.minute },
+            ) catch "??:??";
+            writer.append_to_buffer_line(t, color);
+        }
+    } else {
+        if (self._is_unknown(.Year)) {
+            writer.append_to_buffer_line("    ?", color);
+        } else {
+            const y = std.fmt.bufPrint(&buf, "{d: <5}", .{self._date.year}) catch "    ?";
+            writer.append_to_buffer_line(y, color);
+        }
+    }
+}
+
+fn _is_unknown(self: *const Self, level: Ambiguous) bool {
+    return @intFromEnum(self.ambiguous) >= @intFromEnum(level);
+}
+
+fn _diff_level(a: DateTime, b: DateTime) Ambiguous {
+    if (a.year != b.year) return .Year;
+    if (a.month != b.month) return .Month;
+    if (a.day != b.day) return .Day;
+    if (a.hour != b.hour) return .Hour;
+    if (a.minute != b.minute) return .Minute;
+    return .None;
 }
 
 fn _is_date_older_by_a_year(now: DateTime, date: DateTime) bool {
@@ -242,4 +141,46 @@ fn _conv_mont_id_to_trigram(month_id: u8) []const u8 {
         12 => "Dec",
         else => "Dec", // FIXME: handle err here?
     };
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+test "diff_level picks the highest differing component" {
+    const a = DateTime{ .year = 2026, .month = 8, .day = 13, .hour = 10, .minute = 15 };
+
+    var b = a;
+    try std.testing.expectEqual(Ambiguous.None, _diff_level(a, b));
+    b.minute = 25;
+    try std.testing.expectEqual(Ambiguous.Minute, _diff_level(a, b));
+    b = a;
+    b.hour = 11;
+    try std.testing.expectEqual(Ambiguous.Hour, _diff_level(a, b));
+    b = a;
+    b.day = 14;
+    try std.testing.expectEqual(Ambiguous.Day, _diff_level(a, b));
+    b = a;
+    b.month = 9;
+    try std.testing.expectEqual(Ambiguous.Month, _diff_level(a, b));
+    b = a;
+    b.year = 2019;
+    b.minute = 15;
+    try std.testing.expectEqual(Ambiguous.Year, _diff_level(a, b));
+}
+
+test "ambiguity latches to the worst level seen" {
+    var section = Self.init();
+    section._date = DateTime{ .year = 2026, .month = 8, .day = 13, .hour = 10, .minute = 15 };
+    section.ambiguous = .None;
+
+    var other = section._date;
+    other.day = 14;
+    section._update_from_date(other);
+    try std.testing.expectEqual(Ambiguous.Day, section.ambiguous);
+
+    section._update_from_date(section._date);
+    try std.testing.expectEqual(Ambiguous.Day, section.ambiguous);
+
+    try std.testing.expect(section._is_unknown(.Hour));
+    try std.testing.expect(section._is_unknown(.Day));
+    try std.testing.expect(!section._is_unknown(.Month));
 }

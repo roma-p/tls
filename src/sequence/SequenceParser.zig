@@ -108,9 +108,6 @@ pub fn parse_sequence(
 fn _state_looking_for_sequence(self: *Self) !void {
     switch (self._dir_entry_curr.kind) {
         .file, .unknown => {
-            // only pair with the entry directly before this one: pairing
-            // across a gap would fold the in-between entries into the
-            // sequence when Tls replays [idx_start, idx_start + len).
             if (!self._prev_entry_valid) {
                 self._dir_entry_buff_1 = self._dir_entry_curr;
                 self._prev_entry_valid = true;

@@ -16,7 +16,7 @@ const Self = @This();
 owner: StringShort,
 mode: u32,
 size: u64,
-mtime: u64,
+mtime: i64,
 has_xattr: bool,
 ext: StringExt,
 
@@ -80,7 +80,7 @@ pub fn init(dir: *Dir, path: []const u8, uid_cache: *UidCache) !Self {
         .owner = StringShort.init(),
         .mode = stat.mode,
         .size = @bitCast(stat.size),
-        .mtime = @intCast(@as(i128, mtime.sec)),
+        .mtime = @intCast(mtime.sec),
         .has_xattr = false,
         .ext = StringExt.init(),
     };

@@ -13,7 +13,7 @@ const c = @cImport({
     @cInclude("time.h");
 });
 
-pub fn init(ts: u64) Self {
+pub fn init(ts: i64) Self {
     const SECONDS_PER_DAY = 86400;
     const DAYS_PER_YEAR = 365;
     const DAYS_IN_4YEARS = 1461;
@@ -25,34 +25,35 @@ pub fn init(ts: u64) Self {
     var tm: c.struct_tm = undefined;
     _ = c.localtime_r(&time_val, &tm);
     const tz_offset: i64 = tm.tm_gmtoff;
-    const local_ts: u64 = @intCast(@as(i64, @intCast(ts)) + tz_offset);
+    const local_ts: i64 = ts + tz_offset;
 
-    const seconds_since_midnight: u64 = @rem(local_ts, SECONDS_PER_DAY);
-    var day_n: u64 = DAYS_BEFORE_EPOCH + local_ts / SECONDS_PER_DAY;
+    const seconds_since_midnight: u64 = @intCast(@mod(local_ts, SECONDS_PER_DAY));
+    const day_total: i64 = DAYS_BEFORE_EPOCH + @divFloor(local_ts, SECONDS_PER_DAY);
+    var day_n: u64 = if (day_total < 0) 0 else @intCast(day_total);
     var temp: u64 = 0;
 
-    // Calculate century and year
+    // century and date
     temp = 4 * (day_n + DAYS_IN_100YEARS + 1) / DAYS_IN_400YEARS - 1;
     var year: u16 = @intCast(100 * temp);
     day_n -= DAYS_IN_100YEARS * temp + temp / 4;
 
-    // Calculate remaining years
+    // remaining years
     temp = 4 * (day_n + DAYS_PER_YEAR + 1) / DAYS_IN_4YEARS - 1;
     year += @intCast(temp);
     day_n -= DAYS_PER_YEAR * temp + temp / 4;
 
-    // Calculate month and day
+    // month and day
     var month: u8 = @intCast((5 * day_n + 2) / 153);
     const day: u8 = @intCast(day_n - (@as(u64, @intCast(month)) * 153 + 2) / 5 + 1);
 
-    // Adjust month and year
+    // adjust month and year
     month += 3;
     if (month > 12) {
         month -= 12;
         year += 1;
     }
 
-    // Calculate hour and minute
+    // hour and minute
     const hour: u8 = @intCast(seconds_since_midnight / 3600);
     const minute: u8 = @intCast((seconds_since_midnight % 3600) / 60);
 
@@ -65,9 +66,7 @@ pub fn init(ts: u64) Self {
     };
 }
 
-test "parse timestamp with minutes" {
-    // Use localtime_r to get expected local values, same as init() does
-    const timestamp: u64 = 1640995200; // January 1, 2022 00:00:00 UTC
+fn _expect_matches_localtime(timestamp: i64) !void {
     const dt = init(timestamp);
 
     var time_val: c.time_t = @intCast(timestamp);
@@ -79,4 +78,13 @@ test "parse timestamp with minutes" {
     try std.testing.expectEqual(@as(u8, @intCast(tm.tm_mday)), dt.day);
     try std.testing.expectEqual(@as(u8, @intCast(tm.tm_hour)), dt.hour);
     try std.testing.expectEqual(@as(u8, @intCast(tm.tm_min)), dt.minute);
+}
+
+test "parse timestamp with minutes" {
+    try _expect_matches_localtime(1640995200); // January 1, 2022 00:00:00 UTC
+}
+
+test "parse pre-1970 timestamp" {
+    try _expect_matches_localtime(-365 * 86400); // January 1, 1969 00:00:00 UTC
+    try _expect_matches_localtime(-1); // December 31, 1969 23:59:59 UTC
 }

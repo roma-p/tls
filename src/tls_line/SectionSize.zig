@@ -94,6 +94,8 @@ pub fn set_from_size(self: *Self, number: u64) void {
 }
 
 pub fn update_from_size(self: *Self, number: u64) void {
+    // latch: only ever get more ambiguous, never less
+    if (self.ambiguous == .Different) return;
     const tmp = Self.init_from_size(number);
     if (self.size_indicator != tmp.size_indicator) {
         self.ambiguous = .Different;
@@ -101,8 +103,6 @@ pub fn update_from_size(self: *Self, number: u64) void {
         self.ambiguous = .Different;
     } else if (self.size != tmp.size) {
         self.ambiguous = .SameChar;
-    } else {
-        self.ambiguous = .Identical;
     }
 }
 
