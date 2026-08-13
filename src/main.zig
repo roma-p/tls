@@ -8,10 +8,18 @@ pub fn main() !void {
 
     var tls = try Tls.init(allocator);
     defer tls.deinit();
-    if (std.os.argv.len == 1) {
-        try tls.process(".");
-    } else {
-        const l: []const u8 = std.mem.span(std.os.argv[1]);
-        try tls.process(l);
-    }
+    const path: []const u8 = if (std.os.argv.len > 1)
+        std.mem.span(std.os.argv[1])
+    else
+        ".";
+    tls.process(path) catch |err| {
+        const reason = switch (err) {
+            error.FileNotFound => "no such file or directory",
+            error.NotDir => "not a directory",
+            error.AccessDenied => "permission denied",
+            else => @errorName(err),
+        };
+        std.debug.print("tls: cannot access '{s}': {s}\n", .{ path, reason });
+        std.process.exit(1);
+    };
 }
