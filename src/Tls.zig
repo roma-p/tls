@@ -4,6 +4,7 @@ const DirEntry = fs.Dir.Entry;
 const format_sequence = @import("tls_line/format_sequence.zig"); // TODO: rework this module
 const string = @import("data_structure/string.zig");
 
+const constants = @import("constants.zig");
 const FileStat = @import("file_structure/FileStat.zig");
 const SequenceInfo = @import("sequence/SequenceInfo.zig");
 const SequenceInfoArray = @import("sequence/SequenceInfoArray.zig");
@@ -77,6 +78,7 @@ pub fn process(self: *Self, path: []const u8) !void {
     try self.dir_content_cur_dir.populate(&self.dir_fs, true);
     self.tls_line._max_owner_len = self.dir_content_cur_dir.max_owner_len;
     try self.sequence_parser.parse_sequence(self.dir_content_cur_dir.get_slice(), &self.sequence_info_array_cur_dir);
+    self._set_extra_alignment_width();
 
     self._dir_entry_idx = 0;
     self._dir_entry_slice = self.dir_content_cur_dir.get_slice();
@@ -205,6 +207,42 @@ fn _process_single_entry(self: *Self) !void {
         try self.tls_line.display();
         self.tls_line.reset();
     }
+}
+
+fn _set_extra_alignment_width(self: *Self) void {
+    var counts = [_]usize{0} ** (string.MAX_STR_LEN_ENTRY + 1);
+    for (self.dir_content_cur_dir.get_slice()) |*entry| {
+        switch (entry.kind) {
+            .sym_link, .directory => {
+                counts[entry.name.get_slice().len] += 1;
+            },
+            else => {},
+        }
+    }
+
+    var anchor: usize = 0;
+    var i: usize = counts.len;
+    while (i > 0) {
+        i -= 1;
+        if (counts[i] == 0) continue;
+        anchor = i;
+        if (counts[i] > 1) break;
+        var next: usize = i;
+        var next_found = false;
+        var j: usize = i;
+        while (j > 0) {
+            j -= 1;
+            if (counts[j] != 0) {
+                next = j;
+                next_found = true;
+                break;
+            }
+        }
+        if (!next_found) break;
+        if (i - next <= constants.MAX_EXTRA_PADDING) break;
+        i = next + 1;
+    }
+    self.tls_line._max_extra_name_len = anchor;
 }
 
 fn _process_single_dir(self: *Self) !void {

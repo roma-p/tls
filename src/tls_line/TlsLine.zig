@@ -2,6 +2,7 @@ const std = @import("std");
 const fs = std.fs;
 const Writer = fs.File.Writer;
 const FileKind = fs.File.Kind;
+const constants = @import("../constants.zig");
 const string = @import("../data_structure/string.zig");
 const TermWriter = @import("../TermWriter.zig");
 const SectionDate = @import("SectionDate.zig");
@@ -26,6 +27,7 @@ extra_type: ExtraType,
 _string_buffer: string.StringShort,
 _term_writer: TermWriter,
 _max_owner_len: usize,
+_max_extra_name_len: usize,
 
 pub const ExtraType = enum {
     None,
@@ -69,6 +71,7 @@ pub fn init() Self {
         ._string_buffer = string.StringShort.init(),
         ._term_writer = TermWriter.init(),
         ._max_owner_len = 0,
+        ._max_extra_name_len = 0,
     };
 }
 
@@ -127,6 +130,7 @@ pub fn display_extra(self: *Self) void {
     switch (self.extra) {
         .None => {},
         .Sequence => |*seq| {
+            self._pad_entry_name_to_extra_column();
             self._term_writer.append_to_buffer_line(" :: ", TermWriter.Color.White);
             self._term_writer.append_to_buffer_line(seq.get_slice(), TermWriter.Color.Cyan);
         },
@@ -137,9 +141,20 @@ pub fn display_extra(self: *Self) void {
             } else {
                 color = TermWriter.Color.Red;
             }
+            self._pad_entry_name_to_extra_column();
             self._term_writer.append_to_buffer_line(" -> ", color);
             self._term_writer.append_to_buffer_line(symlink.target.get_slice(), color);
         },
+    }
+}
+
+fn _pad_entry_name_to_extra_column(self: *Self) void {
+    const name_len = self.entry_name.get_slice().len;
+    const padding = self._max_extra_name_len -| name_len;
+    if (padding > constants.MAX_EXTRA_PADDING) return;
+    var i: usize = 0;
+    while (i < padding) : (i += 1) {
+        self._term_writer.append_to_buffer_line(" ", null);
     }
 }
 
