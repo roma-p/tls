@@ -71,6 +71,10 @@ pub fn DynamicArray(comptime init_size: usize, comptime T: type, default: T) typ
             return self.array[0..self.len];
         }
 
+        pub fn get_sub_slice(self: *const Self, from: usize, to: usize) []const T {
+            return self.array[from..to];
+        }
+
         pub fn copy_to_arr(self: *Self, dst: []T, dst_shift: ?usize) void {
             const i_dst_shift: usize = if (dst_shift != null) dst_shift.? else 0;
             const i_end = @min(self.len, dst.len - i_dst_shift);

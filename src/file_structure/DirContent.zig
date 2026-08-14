@@ -15,16 +15,20 @@ pub const FILE_IN_DIR_INIT_SIZE = 64;
 
 dir_entry_array: DirEntryArray,
 file_stat_array: FileStatArray,
+name_pool: NamePool,
 max_owner_len: usize,
 allocator: std.mem.Allocator,
 
 pub const DirEntry = struct {
-    name: StringLong,
+    name_offset: usize,
+    name_len: usize,
     kind: FileKind,
+
 };
 
 const default_dir_entry = DirEntry{
-    .name = StringLong.init(),
+    .name_offset = 0,
+    .name_len = 0,
     .kind = .file,
 };
 
@@ -40,9 +44,13 @@ const FileStatArray = DynamicArray(
     undefined
 );
 
+const NamePool = DynamicArray(FILE_IN_DIR_INIT_SIZE, u8, undefined);
+
+
 pub fn init(allocator: std.mem.Allocator) !Self {
     return Self{
         .allocator = allocator,
+        .name_pool = try NamePool.init(allocator),
         .dir_entry_array = try DirEntryArray.init(allocator),
         .file_stat_array = try FileStatArray.init(allocator),
         .max_owner_len = 0,
@@ -52,12 +60,14 @@ pub fn init(allocator: std.mem.Allocator) !Self {
 pub fn reset(self: *Self) void {
     self.dir_entry_array.reset();
     self.file_stat_array.reset();
+    self.name_pool.reset();
     self.max_owner_len = 0;
 }
 
 pub fn deinit(self: *Self) void {
     self.dir_entry_array.deinit();
     self.file_stat_array.deinit();
+    self.name_pool.deinit();
     self.* = undefined;
 }
 
@@ -69,14 +79,15 @@ pub fn populate(self: *Self, dir: *Dir, eval_file_stat: bool) !void {
 
     while (try walker.next()) |entry| {
         try self.dir_entry_array.ensureCapacity(i + 1);
+        const name_offset = try self._add_entry_name(entry.name);
+        self.dir_entry_array.array[i].name_offset = name_offset;
+        self.dir_entry_array.array[i].name_len = entry.name.len;
         self.dir_entry_array.array[i].kind = entry.kind;
-        self.dir_entry_array.array[i].name.reset();
-        self.dir_entry_array.array[i].name.append_string(entry.name);
         i += 1;
         self.dir_entry_array.len = i;
     }
     // Only sort the populated entries, not the entire array
-    std.mem.sort(DirEntry, self.dir_entry_array.array[0..i], {}, _less_than);
+    std.mem.sort(DirEntry, self.dir_entry_array.array[0..i], self, _less_than);
 
     walker = undefined;
 
@@ -87,7 +98,7 @@ pub fn populate(self: *Self, dir: *Dir, eval_file_stat: bool) !void {
 
     var j: usize = 0;
     for (self.dir_entry_array.array[0..i]) |c| {
-        const file_stat = FileStat.init(dir, c.name.get_slice(), &uid_cache) catch {
+        const file_stat = FileStat.init(dir, self.get_entry_name(c), &uid_cache) catch {
             continue;
         };
         self.dir_entry_array.array[j] = c;
@@ -109,17 +120,40 @@ pub fn get_slice(self: *Self) []const DirEntry {
     return self.dir_entry_array.get_slice();
 }
 
+
 pub fn print_debug(self: *Self) void {
     std.debug.print("dir content\n", .{});
     const slice = self.get_slice();
     for (slice) |entry| {
-        std.debug.print("{s}\n", .{entry.name.get_slice()});
+        std.debug.print("{s}\n", .{self.get_entry_name(entry)});
     }
 }
 
-fn _less_than(_: void, lhs: DirEntry, rhs: DirEntry) bool {
-    const a = lhs.name.get_slice();
-    const b = rhs.name.get_slice();
+pub fn get_entry_name(self: *Self, entry: DirEntry) []const u8 {
+    return self.name_pool.get_sub_slice(
+        entry.name_offset,
+        entry.name_offset + entry.name_len,
+    );
+}
+
+pub fn add_entry(self: *Self, name: []const u8, kind: FileKind) !void {
+    const offset = try self._add_entry_name(name);
+    try self.dir_entry_array.append(.{
+        .name_offset = offset,
+        .name_len = name.len,
+        .kind = kind,
+    });
+}
+
+fn _add_entry_name(self: *Self, name: []const u8) !usize {
+    const offset = self.name_pool.len;
+    try self.name_pool.extend(name);
+    return offset;
+}
+
+fn _less_than(self: *Self, lhs: DirEntry, rhs: DirEntry) bool {
+    const a = self.get_entry_name(lhs);
+    const b = self.get_entry_name(rhs);
 
     // Dotfiles/dotdirs sort before non-dotfiles
     const a_is_dot = a.len > 0 and a[0] == '.';

@@ -77,7 +77,7 @@ pub fn process(self: *Self, path: []const u8) !void {
 
     try self.dir_content_cur_dir.populate(&self.dir_fs, true);
     self.tls_line._max_owner_len = self.dir_content_cur_dir.max_owner_len;
-    try self.sequence_parser.parse_sequence(self.dir_content_cur_dir.get_slice(), &self.sequence_info_array_cur_dir);
+    try self.sequence_parser.parse_sequence(&self.dir_content_cur_dir, &self.sequence_info_array_cur_dir);
     self._set_extra_alignment_width();
 
     self._dir_entry_idx = 0;
@@ -183,7 +183,7 @@ fn _process_single_entry(self: *Self) !void {
         .sym_link => {
             var target_buf: [std.fs.max_path_bytes]u8 = undefined;
             const target = self.dir_fs.readLink(
-                entry.name.get_slice(),
+                self.dir_content_cur_dir.get_entry_name(entry),
                 &target_buf,
             ) catch "?";
 
@@ -214,7 +214,7 @@ fn _set_extra_alignment_width(self: *Self) void {
     for (self.dir_content_cur_dir.get_slice()) |*entry| {
         switch (entry.kind) {
             .sym_link, .directory => {
-                counts[entry.name.get_slice().len] += 1;
+                counts[entry.name_len] += 1;
             },
             else => {},
         }
@@ -248,7 +248,7 @@ fn _set_extra_alignment_width(self: *Self) void {
 fn _process_single_dir(self: *Self) !void {
     const entry = self._dir_entry_slice[self._dir_entry_idx];
     var d = self.dir_fs.openDir(
-        entry.name.get_slice(),
+        self.dir_content_cur_dir.get_entry_name(entry),
         .{ .no_follow = false, .iterate = true },
     ) catch {
         return;
@@ -257,7 +257,7 @@ fn _process_single_dir(self: *Self) !void {
 
     try self.dir_content_sub_dir.populate(&d, false);
     try self.sequence_parser.parse_sequence(
-        self.dir_content_sub_dir.get_slice(),
+        &self.dir_content_sub_dir,
         &self.sequence_info_array_sub_dir,
     );
 
@@ -303,7 +303,7 @@ fn _set_tls_line(
     self.tls_line.size.set_from_size(stat_refined.size);
     self.tls_line.owner.set_string(stat_refined.owner.get_slice());
     self.tls_line.date.set_from_epoch(stat_refined.mtime);
-    self.tls_line.entry_name.set_string(entry.name.get_slice());
+    self.tls_line.entry_name.set_string(self.dir_content_cur_dir.get_entry_name(entry.*));
     self.tls_line.entry_kind = entry.kind;
     self.tls_line.ext = stat_refined.ext;
 }
