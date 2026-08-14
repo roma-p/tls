@@ -12,14 +12,12 @@ pub const StringShort = String(MAX_STR_LEN_OWNER, u8);
 pub fn String(comptime max_len: usize, comptime string_type: type) type {
     return struct {
         _array: Array(max_len, string_type, ' '),
-        _append_number_buffer: [16]string_type,
 
         const Self = @This();
 
         pub fn init() Self {
             return Self{
                 ._array = Array(max_len, string_type, ' ').init(),
-                ._append_number_buffer = undefined,
             };
         }
 
@@ -41,8 +39,8 @@ pub fn String(comptime max_len: usize, comptime string_type: type) type {
             return self._array.len;
         }
 
-        pub fn get_max_len(self: *Self) usize {
-            return self._array.max_len;
+        pub fn get_max_len(self: *const Self) usize {
+            return @TypeOf(self._array).max_len;
         }
 
         pub fn append_char(self: *Self, char: string_type) void {
@@ -61,18 +59,18 @@ pub fn String(comptime max_len: usize, comptime string_type: type) type {
             comptime zero_padding: ?usize,
         ) void {
             const zp = if (zero_padding == null) "0" else _conv_zero_padd_to_str(zero_padding.?);
-
+            var num_buffer: [16]string_type = undefined;
             var num_as_string_tmp: []const string_type = undefined;
             const num_as_string_err: []const string_type = "??";
             if (@mod(number, 1) == 0) {
                 num_as_string_tmp = std.fmt.bufPrint(
-                    &self._append_number_buffer,
+                    &num_buffer,
                     "{d:0>" ++ zp ++ ".0}",
                     .{number},
                 ) catch num_as_string_err;
             } else {
                 num_as_string_tmp = std.fmt.bufPrint(
-                    &self._append_number_buffer,
+                    &num_buffer,
                     "{d:0>" ++ zp ++ ".1}",
                     .{number},
                 ) catch num_as_string_err;
@@ -88,7 +86,6 @@ pub fn String(comptime max_len: usize, comptime string_type: type) type {
             } else {
                 self.append_string(num_as_string_tmp);
             }
-            self._append_number_buffer = undefined;
         }
 
         pub fn set_string(self: *Self, str: []const string_type) void {
@@ -98,7 +95,6 @@ pub fn String(comptime max_len: usize, comptime string_type: type) type {
         pub fn is_not_null(self: *Self) bool { return self.get_len() != 0; }
 
         pub fn check_is_equal(self: *Self, other: *const Self) bool {
-            // const tmp = other._array;
             return self._array.check_is_equal(&other._array);
         }
 

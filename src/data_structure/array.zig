@@ -1,20 +1,18 @@
 const std = @import("std");
 
-pub fn Array(comptime max_len: usize, comptime T: type, default: T) type {
+pub fn Array(comptime capacity: usize, comptime T: type, comptime default_value: T) type {
     return struct {
-        array: [max_len]T,
+        array: [capacity]T,
         len: usize,
-        default: T,
-        max_len: usize,
 
         const Self = @This();
+        pub const max_len = capacity;
+        pub const default = default_value;
 
         pub fn init() Self {
             return Self{
                 .array = [_]T{default} ** max_len,
                 .len = 0,
-                .default = default,
-                .max_len = max_len,
             };
         }
 

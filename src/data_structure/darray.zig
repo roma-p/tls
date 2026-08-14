@@ -2,26 +2,25 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 
-pub fn DynamicArray(comptime init_size: usize, comptime T: type, default: T) type {
+pub fn DynamicArray(comptime init_size: usize, comptime T: type, comptime default_value: T) type {
     return struct {
         len: usize,
         capacity: usize,
-        default: T,
         array: []T,
         allocator: Allocator,
 
         const Self = @This();
-
+        // comptime-known, so kept as a declaration rather than a per-instance field
+        pub const default = default_value;
 
         pub fn init(allocator: Allocator) !Self {
             const ret = Self{
                 .len = 0,
                 .capacity = init_size,
-                .default = default,
                 .array = try allocator.alloc(T, init_size),
                 .allocator = allocator,
             };
-            @memset(ret.array[0..ret.capacity], ret.default);
+            @memset(ret.array[0..ret.capacity], default);
             return ret;
         }
 
@@ -30,7 +29,7 @@ pub fn DynamicArray(comptime init_size: usize, comptime T: type, default: T) typ
         }
 
         pub fn set_to_default(self: *Self) void {
-            @memset(self.array[0..self.capacity], self.default);
+            @memset(self.array[0..self.capacity], default);
         }
 
         pub fn deinit(self: *Self) void {
@@ -99,12 +98,12 @@ pub fn DynamicArray(comptime init_size: usize, comptime T: type, default: T) typ
             const new_capacity = capacity * 2;
             if (self.allocator.remap(self.array, new_capacity)) |new_memory| {
                 self.array = new_memory;
-                @memset(new_memory[self.capacity..new_capacity], self.default);
+                @memset(new_memory[self.capacity..new_capacity], default);
                 self.capacity = new_capacity;
             } else {
                 const new_memory = try self.allocator.alloc(T, new_capacity);
                 @memcpy(new_memory[0..self.len], self.array[0..self.len]);
-                @memset(new_memory[self.len..new_capacity], self.default);
+                @memset(new_memory[self.len..new_capacity], default);
                 self.allocator.free(self.array);
                 self.array = new_memory;
                 self.capacity = new_capacity;
