@@ -169,8 +169,8 @@ pub fn display_size(self: *Self) !void {
     }
 }
 
-pub fn update_owner(self: *Self, other_owner: *const string.StringShort) void {
-    if (!self.owner.check_is_equal(other_owner)) {
+pub fn update_owner(self: *Self, other_owner: []const u8) void {
+    if (!std.mem.eql(u8, self.owner.get_slice(), other_owner)) {
         self.owner.set_string("?");
     }
 }

@@ -301,7 +301,7 @@ fn _set_tls_line(
     self.tls_line.permissions.set_from_mode(stat_refined.mode);
     self.tls_line.has_xattr = stat_refined.has_xattr;
     self.tls_line.size.set_from_size(stat_refined.size);
-    self.tls_line.owner.set_string(stat_refined.owner.get_slice());
+    self.tls_line.owner.set_string(self.dir_content_cur_dir.resolve_owner(stat_refined.uid));
     self.tls_line.date.set_from_epoch(stat_refined.mtime);
     self.tls_line.entry_name.set_string(self.dir_content_cur_dir.get_entry_name(entry.*));
     self.tls_line.entry_kind = entry.kind;
@@ -310,7 +310,7 @@ fn _set_tls_line(
 
 fn _update_tls_line(self: *Self, stat_refined: FileStat) void {
     self.tls_line.size.update_from_size(stat_refined.size);
-    self.tls_line.update_owner(&stat_refined.owner);
+    self.tls_line.update_owner(self.dir_content_cur_dir.resolve_owner(stat_refined.uid));
     self.tls_line.permissions.update_from_mode(stat_refined.mode);
     self.tls_line.date.update_from_epoch(stat_refined.mtime);
 }

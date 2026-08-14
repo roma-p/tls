@@ -16,6 +16,7 @@ pub const FILE_IN_DIR_INIT_SIZE = 64;
 dir_entry_array: DirEntryArray,
 file_stat_array: FileStatArray,
 name_pool: NamePool,
+uid_cache: FileStat.UidCache,
 max_owner_len: usize,
 allocator: std.mem.Allocator,
 
@@ -51,6 +52,7 @@ pub fn init(allocator: std.mem.Allocator) !Self {
     return Self{
         .allocator = allocator,
         .name_pool = try NamePool.init(allocator),
+        .uid_cache = FileStat.UidCache.init(),
         .dir_entry_array = try DirEntryArray.init(allocator),
         .file_stat_array = try FileStatArray.init(allocator),
         .max_owner_len = 0,
@@ -86,19 +88,15 @@ pub fn populate(self: *Self, dir: *Dir, eval_file_stat: bool) !void {
         i += 1;
         self.dir_entry_array.len = i;
     }
-    // Only sort the populated entries, not the entire array
     std.mem.sort(DirEntry, self.dir_entry_array.array[0..i], self, _less_than);
 
     walker = undefined;
 
     if (!eval_file_stat) return;
 
-    // Create UID cache to avoid repeated getpwuid() calls
-    var uid_cache = FileStat.UidCache.init();
-
     var j: usize = 0;
     for (self.dir_entry_array.array[0..i]) |c| {
-        const file_stat = FileStat.init(dir, self.get_entry_name(c), &uid_cache) catch {
+        const file_stat = FileStat.init(dir, self.get_entry_name(c)) catch {
             continue;
         };
         self.dir_entry_array.array[j] = c;
@@ -107,7 +105,8 @@ pub fn populate(self: *Self, dir: *Dir, eval_file_stat: bool) !void {
             self.dir_entry_array.array[j].kind = _kind_from_mode(file_stat.mode);
         }
         try self.file_stat_array.append(file_stat);
-        const owner_len = file_stat.owner._array.len;
+        // resolve the owner now (memoized) so the display column can be aligned
+        const owner_len = self.uid_cache.get_or_resolve(file_stat.uid).len;
         if (owner_len > self.max_owner_len) {
             self.max_owner_len = owner_len;
         }
@@ -134,6 +133,10 @@ pub fn get_entry_name(self: *Self, entry: DirEntry) []const u8 {
         entry.name_offset,
         entry.name_offset + entry.name_len,
     );
+}
+
+pub fn resolve_owner(self: *Self, uid: u32) []const u8 {
+    return self.uid_cache.get_or_resolve(uid);
 }
 
 pub fn add_entry(self: *Self, name: []const u8, kind: FileKind) !void {

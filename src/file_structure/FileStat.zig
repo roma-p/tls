@@ -13,7 +13,7 @@ const MAX_STR_LEN_EXT = string.MAX_STR_LEN_EXT;
 
 const Self = @This();
 
-owner: StringShort,
+uid: u32,
 mode: u32,
 size: u64,
 mtime: i64,
@@ -71,33 +71,35 @@ pub const UidCache = struct {
         };
         self.count += 1;
     }
+
+    pub fn get_or_resolve(self: *UidCache, uid: u32) []const u8 {
+        if (self.lookup(uid)) |cached| return cached.get_slice();
+
+        var username = StringShort.init();
+        const psswd = c.getpwuid(uid);
+        if (psswd != null) {
+            const name_c_type: [*c]u8 = psswd.*.pw_name;
+            username.append_string(std.mem.span(@as([*:0]const u8, name_c_type)));
+        } else {
+            username.append_string("?");
+        }
+        self.insert(uid, username);
+        if (self.lookup(uid)) |cached| return cached.get_slice();
+        return "?";
+    }
 };
 
-pub fn init(dir: *Dir, path: []const u8, uid_cache: *UidCache) !Self {
+pub fn init(dir: *Dir, path: []const u8) !Self {
     const stat = try posix.fstatat(dir.fd, path, posix.AT.SYMLINK_NOFOLLOW);
     const mtime = stat.mtime();
     var ret = Self{
-        .owner = StringShort.init(),
+        .uid = stat.uid,
         .mode = stat.mode,
         .size = @bitCast(stat.size),
         .mtime = @intCast(mtime.sec),
         .has_xattr = false,
         .ext = StringExt.init(),
     };
-
-    if (uid_cache.lookup(stat.uid)) |cached_username| {
-        ret.owner.append_string(cached_username.get_slice());
-    } else {
-        const psswd = c.getpwuid(stat.uid);
-        if (psswd != null) {
-            const name_c_type: [*c]u8 = psswd.*.pw_name;
-            const name_z_type = std.mem.span(@as([*:0]const u8, name_c_type));
-            ret.owner.append_string(name_z_type);
-        } else {
-            ret.owner.append_string("?");
-        }
-        uid_cache.insert(stat.uid, ret.owner);
-    }
 
     if (_has_any_extended_attributes(dir, path)) ret.has_xattr = true;
     _fill_extension(path, &ret.ext);
@@ -152,8 +154,7 @@ test "file info" {
     var file = try std.fs.cwd().createFile(path, .{});
     defer file.close();
 
-    var uid_cache = UidCache.init();
     var cwd = std.fs.cwd();
-    const stat = try Self.init(&cwd, path, &uid_cache);
+    const stat = try Self.init(&cwd, path);
     _ = stat;
 }
