@@ -10,11 +10,17 @@ ls variant, tweaked for vfx / animation
 
 ---
 
-`tls` is a replacement for `ls -l` aimed at directories full of numbered file
-sequences: render frames, image caches, versioned scene files. Instead of
-printing 2,000 near-identical lines, it detects the sequence and collapses it
-into one line with a compact frame range.
+## Overview
 
+`tls` is a replacement for `ls -l`.
+
+It is aimed at technical directors, pipeline developers and technical people
+from the industry, who have to deal with directories full of sequences of
+render frames, image caches, versioned scene files. Plain `ls` buries you
+in those files.
+
+Instead of printing 2,000 near-identical lines, `tls` detects the sequence
+and collapses it into one line with a compact frame range.
 
 ## Sequence notation
 
