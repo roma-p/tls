@@ -27,6 +27,7 @@ extra_type: ExtraType,
 _string_buffer: string.StringShort,
 _term_writer: TermWriter,
 _max_owner_len: usize,
+_max_size_len: usize,
 _max_extra_name_len: usize,
 
 pub const ExtraType = enum {
@@ -71,6 +72,7 @@ pub fn init() Self {
         ._string_buffer = string.StringShort.init(),
         ._term_writer = TermWriter.init(),
         ._max_owner_len = 0,
+        ._max_size_len = 0,
         ._max_extra_name_len = 0,
     };
 }
@@ -161,10 +163,14 @@ fn _pad_entry_name_to_extra_column(self: *Self) void {
 pub fn display_size(self: *Self) !void {
     switch (self.entry_kind) {
         .directory => {
-            self._term_writer.append_to_buffer_line("     -", null);
+            var i: usize = 1;
+            while (i < self._max_size_len) : (i += 1) {
+                self._term_writer.append_to_buffer_line(" ", null);
+            }
+            self._term_writer.append_to_buffer_line("-", null);
         },
         else => {
-            try self.size.display(&self._term_writer);
+            try self.size.display(&self._term_writer, self._max_size_len);
         },
     }
 }

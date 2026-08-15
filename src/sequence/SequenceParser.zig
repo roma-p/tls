@@ -12,8 +12,8 @@ sequence_info_array: *SequenceInfoArray,
 
 _dir_content: *DirContent, // resolves an entry's name from the shared pool
 _dir_entry_slice: []const DirEntry,
-_dir_entry_buff_1: DirEntry, // TODO: make this pointer.
-_dir_entry_buff_2: DirEntry, // TODO: make this pointer.
+_dir_entry_buff_1: DirEntry,
+_dir_entry_buff_2: DirEntry,
 _dir_entry_curr: DirEntry,
 _prev_entry_valid: bool, // buff_1 holds the file entry directly before curr
 _i: usize, // use for dir_entry_slice

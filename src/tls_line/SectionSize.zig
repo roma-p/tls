@@ -94,7 +94,6 @@ pub fn set_from_size(self: *Self, number: u64) void {
 }
 
 pub fn update_from_size(self: *Self, number: u64) void {
-    // latch: only ever get more ambiguous, never less
     if (self.ambiguous == .Different) return;
     const tmp = Self.init_from_size(number);
     if (self.size_indicator != tmp.size_indicator) {
@@ -106,25 +105,39 @@ pub fn update_from_size(self: *Self, number: u64) void {
     }
 }
 
-pub fn display(self: *Self, writer: *TermWriter) !void {
-    self.buffer_string.reset();
-    if (self.ambiguous == .Different) {
-        self.buffer_string.append_string("     ?");
-    } else if (self.size_indicator == 0) {
-        if (self.ambiguous == .SameChar) {
-            self.buffer_string.append_string("     ?");
-        } else {
-            self.buffer_string.append_number(f32, self.size, 6, null);
-        }
+pub fn natural_len(number: u64) usize {
+    var tmp = Self.init_from_size(number);
+    tmp.buffer_string.reset();
+    tmp._append_natural();
+    return tmp.buffer_string.get_slice().len;
+}
+
+fn _append_natural(self: *Self) void {
+    if (self.size_indicator == 0) {
+        self.buffer_string.append_number(f32, self.size, null, null);
     } else if (self.size_indicator == 1) {
-        if (self.ambiguous == .Identical) {
-            self.buffer_string.append_number(f32, self.size, 5, null);
-        } else {
-            self.buffer_string.append_string("    ?");
-        }
+        self.buffer_string.append_number(f32, self.size, null, null);
         self.buffer_string.append_char(self.size_char);
     } else {
-        self.buffer_string.append_string("  huge");
+        self.buffer_string.append_string("huge");
     }
-    writer.append_to_buffer_line(self.buffer_string.get_slice(), TermWriter.Color.Green);
+}
+
+pub fn display(self: *Self, writer: *TermWriter, max_len: usize) !void {
+    self.buffer_string.reset();
+    if (self.ambiguous == .Different) {
+        self.buffer_string.append_char('?');
+    } else if (self.size_indicator == 0 and self.ambiguous == .SameChar) {
+        self.buffer_string.append_char('?');
+    } else if (self.size_indicator == 1 and self.ambiguous != .Identical) {
+        self.buffer_string.append_char('?');
+        self.buffer_string.append_char(self.size_char);
+    } else {
+        self._append_natural();
+    }
+
+    const content = self.buffer_string.get_slice();
+    var i: usize = content.len;
+    while (i < max_len) : (i += 1) writer.append_to_buffer_line(" ", null);
+    writer.append_to_buffer_line(content, TermWriter.Color.Green);
 }

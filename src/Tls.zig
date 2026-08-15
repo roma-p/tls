@@ -10,6 +10,7 @@ const SequenceInfo = @import("sequence/SequenceInfo.zig");
 const SequenceInfoArray = @import("sequence/SequenceInfoArray.zig");
 const SequenceParser = @import("sequence/SequenceParser.zig");
 const DirContent = @import("file_structure/DirContent.zig");
+const SectionSize = @import("tls_line/SectionSize.zig");
 const TlsLine = @import("tls_line/TlsLine.zig");
 
 const Self = @This();
@@ -48,6 +49,7 @@ pub fn process(self: *Self, path: []const u8) !void {
 
     try self.dir_content_cur_dir.populate(&dir_fs, true);
     self.tls_line._max_owner_len = self.dir_content_cur_dir.max_owner_len;
+    self.tls_line._max_size_len = self._compute_max_size_len();
     try self.sequence_parser.parse_sequence(&self.dir_content_cur_dir, &self.sequence_info_array_cur_dir);
     self._set_extra_alignment_width();
 
@@ -99,6 +101,18 @@ fn _set_extra_alignment_width(self: *Self) void {
         i = next + 1;
     }
     self.tls_line._max_extra_name_len = anchor;
+}
+
+fn _compute_max_size_len(self: *Self) usize {
+    var max_len: usize = 1;
+    const entries = self.dir_content_cur_dir.get_slice();
+    const stats = self.dir_content_cur_dir.file_stat_array.get_slice();
+    for (entries, stats) |entry, stat| {
+        if (entry.kind == .directory) continue;
+        const w = SectionSize.natural_len(stat.size);
+        if (w > max_len) max_len = w;
+    }
+    return max_len;
 }
 
 const Walk = struct {
