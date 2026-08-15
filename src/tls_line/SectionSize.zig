@@ -123,7 +123,7 @@ fn _append_natural(self: *Self) void {
     }
 }
 
-pub fn display(self: *Self, writer: *TermWriter, max_len: usize) !void {
+fn _build_display_content(self: *Self) void {
     self.buffer_string.reset();
     if (self.ambiguous == .Different) {
         self.buffer_string.append_char('?');
@@ -135,6 +135,15 @@ pub fn display(self: *Self, writer: *TermWriter, max_len: usize) !void {
     } else {
         self._append_natural();
     }
+}
+
+pub fn display_len(self: *Self) usize {
+    self._build_display_content();
+    return self.buffer_string.get_slice().len;
+}
+
+pub fn display(self: *Self, writer: *TermWriter, max_len: usize) !void {
+    self._build_display_content();
 
     const content = self.buffer_string.get_slice();
     var i: usize = content.len;

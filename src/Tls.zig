@@ -49,8 +49,8 @@ pub fn process(self: *Self, path: []const u8) !void {
 
     try self.dir_content_cur_dir.populate(&dir_fs, true);
     self.tls_line._max_owner_len = self.dir_content_cur_dir.max_owner_len;
-    self.tls_line._max_size_len = self._compute_max_size_len();
     try self.sequence_parser.parse_sequence(&self.dir_content_cur_dir, &self.sequence_info_array_cur_dir);
+    self.tls_line._max_size_len = self._compute_max_size_len();
     self._set_extra_alignment_width();
 
     var walk = Walk{
@@ -107,10 +107,29 @@ fn _compute_max_size_len(self: *Self) usize {
     var max_len: usize = 1;
     const entries = self.dir_content_cur_dir.get_slice();
     const stats = self.dir_content_cur_dir.file_stat_array.get_slice();
-    for (entries, stats) |entry, stat| {
-        if (entry.kind == .directory) continue;
-        const w = SectionSize.natural_len(stat.size);
-        if (w > max_len) max_len = w;
+    const seq = &self.sequence_info_array_cur_dir;
+    const seq_nbr = seq.array_seq_start_idx.len;
+
+    var idx: usize = 0;
+    var seq_i: usize = 0;
+    while (idx < entries.len) {
+        if (seq_i < seq_nbr and seq.array_seq_start_idx.array[seq_i] == idx) {
+            const len = seq.array_seq_info.array[seq_i].sequence_split.compute_len();
+            var size = SectionSize.init();
+            size.set_from_size(stats[idx].size);
+            var k: usize = 1;
+            while (k < len) : (k += 1) size.update_from_size(stats[idx + k].size);
+            const w = size.display_len();
+            if (w > max_len) max_len = w;
+            idx += len;
+            seq_i += 1;
+        } else {
+            if (entries[idx].kind != .directory) {
+                const w = SectionSize.natural_len(stats[idx].size);
+                if (w > max_len) max_len = w;
+            }
+            idx += 1;
+        }
     }
     return max_len;
 }

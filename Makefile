@@ -1,4 +1,7 @@
 
+build: 
+	zig build
+
 run: 
 	zig build && ./zig-out/bin/tls
 
