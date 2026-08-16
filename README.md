@@ -21,7 +21,7 @@ render frames, image caches, versioned scene files.
 Plain `ls` buries you in sequences files. `tls` detects the sequence and 
 collapses it into one line with a compact frame range.
 
-Themed based on [exa](https://github.com/ogham/exa)<br>
+Theme based on [exa](https://github.com/ogham/exa)<br>
 
 ## Sequence notation
 
