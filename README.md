@@ -2,7 +2,7 @@
 
 # tls
 
-ls variant, tweaked for vfx / animation
+ls -l variant, tweaked for vfx / animation
 
 ![Screenshots of tls](doc/image1.png)
 
@@ -14,13 +14,14 @@ ls variant, tweaked for vfx / animation
 
 `tls` is a replacement for `ls -l`.
 
-It is aimed at technical directors, pipeline developers and technical people
+Aimed at technical directors, pipeline developers and technical people
 from the industry, who have to deal with directories full of sequences of
-render frames, image caches, versioned scene files. Plain `ls` buries you
-in those files.
+render frames, image caches, versioned scene files. 
 
-Instead of printing 2,000 near-identical lines, `tls` detects the sequence
-and collapses it into one line with a compact frame range.
+Plain `ls` buries you in sequences files. `tls` detects the sequence and 
+collapses it into one line with a compact frame range.
+
+Themed based on [exa](https://github.com/ogham/exa)<br>
 
 ## Sequence notation
 
